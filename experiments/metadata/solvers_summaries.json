@@ -1,0 +1,1542 @@
+[
+  {
+    "function_name": "build_stencil_properties",
+    "class_name": "",
+    "summary": "Translates a solver accuracy/order request and domain dimension into the stencil size, polynomial degree, spline degree, tree mode, and point set used by the RBF-FD assembler."
+  },
+  {
+    "function_name": "resolve_stencil_factory",
+    "class_name": "",
+    "summary": "Normalizes a stencil backend specification into a callable stencil constructor. It accepts existing callables plus supported string aliases for RBF and weighted least-squares stencils, and raises for unknown backends."
+  },
+  {
+    "function_name": "make_assembler",
+    "class_name": "",
+    "summary": "Creates either a standard or overlapped finite-difference operator assembler using the requested stencil backend. It maps supported assembler aliases to FDDiffOp or FDODiffOp and rejects unknown names."
+  },
+  {
+    "function_name": "evaluate_node_callback",
+    "class_name": "",
+    "summary": "Evaluates a node-wise callback, array, or scalar and returns one floating-point value per node. Scalar values are broadcast and mismatched node counts raise an error."
+  },
+  {
+    "function_name": "evaluate_boundary_values",
+    "class_name": "",
+    "summary": "Evaluates boundary condition values from a callback, array, or scalar, supporting callbacks that accept full boundary data or just boundary coordinates. It returns a flat array and validates that it has one value per boundary row."
+  },
+  {
+    "function_name": "build_system_matrix",
+    "class_name": "",
+    "summary": "Stacks the interior Poisson operator and boundary operator into one sparse system. For pure Neumann problems it augments the system with a constant-nullspace constraint row and column."
+  },
+  {
+    "function_name": "build_system_rhs",
+    "class_name": "",
+    "summary": "Concatenates the interior and boundary right-hand-side vectors for a Poisson solve. For pure Neumann systems it appends the zero constraint value used by the nullspace augmentation."
+  },
+  {
+    "function_name": "build_initial_guess",
+    "class_name": "",
+    "summary": "Converts several allowed initial-guess shapes into the full linear-system guess vector expected by the Poisson helpers. It also inserts boundary values and the Neumann nullspace variable when needed."
+  },
+  {
+    "function_name": "gmres_with_fallback",
+    "class_name": "",
+    "summary": "Solves a sparse linear system with GMRES using a supplied initial guess. If GMRES fails or returns non-finite values, it falls back to a direct sparse solve."
+  },
+  {
+    "function_name": "build_ilu_preconditioner",
+    "class_name": "",
+    "summary": "Attempts to build an incomplete-LU preconditioner for a sparse system and wrap it as a SciPy LinearOperator. It returns None if the factorization cannot be constructed."
+  },
+  {
+    "function_name": "gmres_with_preconditioner",
+    "class_name": "",
+    "summary": "Solves a sparse linear system with GMRES using optional initial guess and preconditioner inputs. It falls back to a direct sparse solve if the iterative solve fails or produces non-finite values."
+  },
+  {
+    "function_name": "validate_physical_state",
+    "class_name": "",
+    "summary": "Converts a state vector to a flat float array and checks that it has the expected physical-node length."
+  },
+  {
+    "function_name": "is_fixed_boundary_callback",
+    "class_name": "",
+    "summary": "Detects callbacks that appear to depend only on coordinates by checking for a single positional argument. Non-callables and objects without code metadata are treated as not fixed."
+  },
+  {
+    "function_name": "evaluate_boundary_coefficient",
+    "class_name": "",
+    "summary": "Evaluates a boundary coefficient from a callback, array, or scalar, optionally passing time to callbacks that support it. Scalars are broadcast and the result must match the number of boundary nodes."
+  },
+  {
+    "function_name": "evaluate_forcing_callback",
+    "class_name": "",
+    "summary": "Evaluates a forcing term from a callback, array, or scalar using the callback signatures accepted by the time-dependent solvers. The result is flattened and must provide one value per physical row."
+  },
+  {
+    "function_name": "evaluate_transient_boundary_values",
+    "class_name": "",
+    "summary": "Evaluates time-dependent boundary values from flexible callback signatures or fixed values. It returns a flat boundary vector and validates that its length matches the boundary rows."
+  },
+  {
+    "function_name": "build_implicit_system",
+    "class_name": "",
+    "summary": "Builds the sparse linear system used by implicit diffusion steps by scaling the Laplacian, adding an identity block on physical rows, and appending boundary rows."
+  },
+  {
+    "function_name": "pu_patch_geometry",
+    "class_name": "",
+    "summary": "Builds all partition-of-unity patch data for a domain, including patch centers, radii, node memberships, stencils, and a center search tree."
+  },
+  {
+    "function_name": "pu_localized_operator",
+    "class_name": "",
+    "summary": "Assembles a sparse partition-of-unity operator at query points by blending local patch RBF-FD weights. It supports interpolation, Laplacian, and boundary operators with optional normals and boundary coefficients."
+  },
+  {
+    "function_name": "pu_localized_evaluate",
+    "class_name": "",
+    "summary": "Evaluates coefficient values at query points using partition-of-unity interpolation over local patch stencils. Points not covered by any patch fall back to nearest-node values."
+  },
+  {
+    "function_name": "choose_patch_spacing",
+    "class_name": "",
+    "summary": "Returns the patch-center spacing, using the provided spacing factor times the separation radius when positive and otherwise a default of two separation radii."
+  },
+  {
+    "function_name": "choose_patch_radius",
+    "class_name": "",
+    "summary": "Returns the patch radius, using the provided radius factor times the separation radius when positive and otherwise a default of three separation radii."
+  },
+  {
+    "function_name": "choose_patch_centers",
+    "class_name": "",
+    "summary": "Chooses patch centers greedily from the node set so accepted centers are separated by the requested spacing."
+  },
+  {
+    "function_name": "build_patch_node_ids",
+    "class_name": "",
+    "summary": "Finds the node indices belonging to each patch by radius search, with a nearest-neighbor fallback when too few nodes are found."
+  },
+  {
+    "function_name": "choose_minimum_patch_nodes",
+    "class_name": "",
+    "summary": "Computes the minimum number of nodes required per patch from the dimension and target order using twice the polynomial basis size plus one."
+  },
+  {
+    "function_name": "build_patch_stencil_properties",
+    "class_name": "",
+    "summary": "Creates stencil properties for local partition-of-unity patch stencils from the dimension and target order."
+  },
+  {
+    "function_name": "build_patch_stencil",
+    "class_name": "",
+    "summary": "Initializes an RBFStencil on a given set of local patch nodes using the supplied stencil properties."
+  },
+  {
+    "function_name": "build_patch_stencils",
+    "class_name": "",
+    "summary": "Builds one initialized RBFStencil for each patch node-index set."
+  },
+  {
+    "function_name": "build_center_tree",
+    "class_name": "",
+    "summary": "Creates a PatchCenterTree containing a cKDTree searcher when patch centers are available, or an empty tree record otherwise."
+  },
+  {
+    "function_name": "query_patch_ids",
+    "class_name": "",
+    "summary": "Finds the patch indices whose centers are within the patch radius of each query point. If a query has no covering patch, it assigns the nearest patch when centers exist."
+  },
+  {
+    "function_name": "local_operator_weights",
+    "class_name": "",
+    "summary": "Computes local RBF-FD weights for interpolation, Laplacian, or mixed boundary operators on a single patch stencil."
+  },
+  {
+    "function_name": "pu_patch_weight",
+    "class_name": "",
+    "summary": "Evaluates the compactly supported partition-of-unity patch weight polynomial for normalized distances."
+  },
+  {
+    "function_name": "copy_stencil_properties",
+    "class_name": "",
+    "summary": "Returns a new StencilProperties object containing the same stored fields as the input properties."
+  },
+  {
+    "function_name": "init",
+    "class_name": "DiffusionSolver",
+    "summary": "Initializes the diffusion solver by storing the domain, timestep, diffusion coefficient, and threading settings, then assembling the reusable Laplacian operator and clearing step history and caches."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "DiffusionSolver",
+    "summary": "Updates the time-step size and invalidates cached boundary and implicit solve data that depend on the old step size."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "DiffusionSolver",
+    "summary": "Seeds the BDF history with one physical state and clears higher-order history and cached solve data."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "DiffusionSolver",
+    "summary": "Seeds the BDF history with one, two, or three physical states so the solver can start at BDF1, BDF2, or BDF3 order."
+  },
+  {
+    "function_name": "current_physical_state",
+    "class_name": "DiffusionSolver",
+    "summary": "Returns the latest available physical state from the stored BDF history."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "DiffusionSolver",
+    "summary": "Performs one first-order implicit BDF diffusion step with forcing and boundary data. It requires an initial state and advances through the shared implicit solve path."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "DiffusionSolver",
+    "summary": "Performs one second-order BDF diffusion step using the two most recent states and forcing at the requested time. It requires one previously completed step."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "DiffusionSolver",
+    "summary": "Performs one third-order BDF diffusion step using the three-state history and forcing at the requested time. It requires two previously completed steps."
+  },
+  {
+    "function_name": "_take_step",
+    "class_name": "DiffusionSolver",
+    "summary": "Carries out the common implicit step workflow by evaluating boundary data, ensuring the linear system is ready, solving it, and rotating the BDF history."
+  },
+  {
+    "function_name": "_get_boundary_coefficients",
+    "class_name": "DiffusionSolver",
+    "summary": "Evaluates Neumann and Dirichlet boundary coefficient arrays, caching them when both callbacks appear time-independent."
+  },
+  {
+    "function_name": "_ensure_boundary_operator",
+    "class_name": "DiffusionSolver",
+    "summary": "Assembles the boundary operator for the current coefficients unless a reusable fixed-coefficient operator is already cached."
+  },
+  {
+    "function_name": "_invalidate_implicit_solver",
+    "class_name": "DiffusionSolver",
+    "summary": "Clears the cached implicit system, preconditioner, and stored Laplacian scale."
+  },
+  {
+    "function_name": "_ensure_implicit_solver",
+    "class_name": "DiffusionSolver",
+    "summary": "Returns a cached implicit diffusion system for the requested Laplacian scale or builds it and its ILU preconditioner when needed."
+  },
+  {
+    "function_name": "_push_completed_step",
+    "class_name": "DiffusionSolver",
+    "summary": "Stores a newly computed state in the BDF history, rotating older states once third-order history is active."
+  },
+  {
+    "function_name": "init",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Initializes one DiffusionSolver per species using the corresponding diffusion coefficient from the provided coefficient array."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Updates the shared time-step size and propagates it to every per-species diffusion solver."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Validates that the state matrix has one column per initialized species and seeds each species solver from its column."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with first-order BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with second-order BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with third-order BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Reports the distributed-state behavior of the first initialized per-species solver."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Returns the output range from the first species solver, or the domain physical-node range if no solvers exist."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Returns output nodes from the first species solver, or the domain physical nodes if no solvers exist."
+  },
+  {
+    "function_name": "get_laplacian",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Returns the Laplacian from the first species solver when available."
+  },
+  {
+    "function_name": "get_bc_ops",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Returns the list of boundary operators currently stored by the per-species solvers."
+  },
+  {
+    "function_name": "get_diffusion_coefficients",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Returns a copy of the per-species diffusion coefficient array."
+  },
+  {
+    "function_name": "_step_columns",
+    "class_name": "HeterogeneousMultiSpeciesDiffusionSolver",
+    "summary": "Runs the requested BDF step for each species with callback adapters that pass species index and that species diffusion coefficient."
+  },
+  {
+    "function_name": "init",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Initializes one PUDiffusionSolver per species using the corresponding diffusion coefficient from the provided coefficient array."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Updates the shared time-step size and propagates it to every per-species PU diffusion solver."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Validates that the state matrix has one column per initialized PU species solver and seeds each solver from its column."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with first-order PU BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with second-order PU BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with third-order PU BDF diffusion using species-specific diffusion coefficients and callback wrappers."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Reports the distributed-state behavior of the first initialized PU species solver."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Returns the output range from the first PU species solver, or the domain physical-node range if no solvers exist."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Returns output nodes from the first PU species solver, or the domain physical nodes if no solvers exist."
+  },
+  {
+    "function_name": "_step_columns",
+    "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
+    "summary": "Runs the requested BDF step for each PU species solver with callback adapters that pass species index and that species diffusion coefficient."
+  },
+  {
+    "function_name": "init",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Stores the shared diffusion configuration for a multi-species solve and clears any existing per-species solvers."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Updates the shared time-step size and propagates it to all existing per-species diffusion solvers."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Validates a two-dimensional species state matrix, creates per-species solvers as needed, and seeds each solver from one state column."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Seeds each per-species diffusion solver with matching columns from one or more history matrices."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with first-order BDF diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with second-order BDF diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Advances all species with third-order BDF diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Reports the distributed-state behavior of the first per-species solver when solvers exist."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Returns the output range from the first per-species solver, or the domain physical-node range before solvers are created."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Returns output nodes from the first per-species solver, or the domain physical nodes before solvers are created."
+  },
+  {
+    "function_name": "get_laplacian",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Returns the Laplacian from the first per-species solver when available."
+  },
+  {
+    "function_name": "get_bc_op",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Returns the boundary operator from the first per-species solver when available."
+  },
+  {
+    "function_name": "_ensure_solvers",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Creates one configured DiffusionSolver per species on first use and rejects later calls with a different species count."
+  },
+  {
+    "function_name": "_step_columns",
+    "class_name": "MultiSpeciesDiffusionSolver",
+    "summary": "Runs the requested BDF step on each species solver using callbacks that extract that species column from matrix-valued forcing and boundary data."
+  },
+  {
+    "function_name": "_evaluate_state_callback",
+    "class_name": "",
+    "summary": "Evaluates a state-dependent callback, scalar, or array using coordinates and the current state. Scalars are broadcast and the result must match the node count."
+  },
+  {
+    "function_name": "_rectangular_diagonal",
+    "class_name": "",
+    "summary": "Builds a sparse rectangular diagonal matrix with the provided values on the leading diagonal and the requested column count."
+  },
+  {
+    "function_name": "_gmres_step",
+    "class_name": "",
+    "summary": "Solves a Newton linear correction system with GMRES using an ILU preconditioner built from the provided preconditioner matrix."
+  },
+  {
+    "function_name": "init",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Initializes the nonlinear variable-coefficient Poisson solver by building domain structures and assembling reusable Laplacian and gradient operators."
+  },
+  {
+    "function_name": "set_nonlinear_tolerance",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Sets the residual-norm tolerance used to decide nonlinear Newton convergence."
+  },
+  {
+    "function_name": "set_linear_tolerance",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Sets the GMRES tolerance used for Newton correction solves."
+  },
+  {
+    "function_name": "set_max_nonlinear_iterations",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Sets the maximum number of nonlinear iterations, forcing it to be at least one."
+  },
+  {
+    "function_name": "_assemble_boundary_data",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Evaluates boundary coefficients and values, assembles the boundary operator, and records whether the problem is pure Neumann."
+  },
+  {
+    "function_name": "_build_initial_unknown",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Converts an optional initial guess into the full nonlinear unknown vector, including the Neumann Lagrange multiplier slot when needed."
+  },
+  {
+    "function_name": "_state_dependent_data",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Evaluates coefficient, coefficient derivative, forcing, and forcing derivative at the current state and builds the current variable PDE operator."
+  },
+  {
+    "function_name": "_assemble_residual",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Builds the nonlinear residual from the PDE rows, boundary rows, and the pure-Neumann sum constraint when present."
+  },
+  {
+    "function_name": "_assemble_exact_jacobian",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Assembles the Newton Jacobian including derivatives of the coefficient field, gradient terms, forcing derivative, boundary rows, and optional Neumann augmentation."
+  },
+  {
+    "function_name": "_assemble_preconditioner",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Builds the sparse preconditioner matrix from the current PDE operator, forcing derivative, boundary rows, and optional Neumann augmentation."
+  },
+  {
+    "function_name": "solve",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Solves the nonlinear variable-coefficient Poisson problem with Newton iterations, GMRES linear solves, and a simple backtracking line search. It returns the converged solution, operators, boundary data, iteration count, and residual norm, or raises if convergence fails."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Reports that this solver returns local physical output values rather than a distributed full state."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the zero-based output range covering the solver physical nodes."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the physical nodes where the nonlinear Poisson solution is reported."
+  },
+  {
+    "function_name": "get_laplacian",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the assembled Laplacian operator."
+  },
+  {
+    "function_name": "get_gradient_ops",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns copies of the assembled coordinate-gradient operators."
+  },
+  {
+    "function_name": "get_last_pde_operator",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the nonlinear PDE operator from the most recent residual assembly or solve."
+  },
+  {
+    "function_name": "get_bc_op",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the boundary operator assembled for the most recent solve."
+  },
+  {
+    "function_name": "last_solve_used_nullspace",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Reports whether the most recent nonlinear solve used pure-Neumann nullspace augmentation."
+  },
+  {
+    "function_name": "get_last_nonlinear_iterations",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the iteration index recorded for the most recent nonlinear solve."
+  },
+  {
+    "function_name": "get_last_residual_norm",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "Returns the residual norm recorded for the most recent nonlinear solve."
+  },
+  {
+    "function_name": "setNonlinearTolerance",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for set_nonlinear_tolerance."
+  },
+  {
+    "function_name": "setLinearTolerance",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for set_linear_tolerance."
+  },
+  {
+    "function_name": "setMaxNonlinearIterations",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for set_max_nonlinear_iterations."
+  },
+  {
+    "function_name": "returnsDistributedState",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for returns_distributed_state."
+  },
+  {
+    "function_name": "getOutputRange",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_output_range."
+  },
+  {
+    "function_name": "getOutputNodes",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_output_nodes."
+  },
+  {
+    "function_name": "getLaplacian",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_laplacian."
+  },
+  {
+    "function_name": "getGradientOps",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_gradient_ops."
+  },
+  {
+    "function_name": "getLastPdeOperator",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_last_pde_operator."
+  },
+  {
+    "function_name": "getBCOp",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_bc_op."
+  },
+  {
+    "function_name": "lastSolveUsedNullspace",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for last_solve_used_nullspace."
+  },
+  {
+    "function_name": "getLastNonlinearIterations",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_last_nonlinear_iterations."
+  },
+  {
+    "function_name": "getLastResidualNorm",
+    "class_name": "NonlinearVariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_last_residual_norm."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PoissonSolver",
+    "summary": "Initializes the Poisson solver by building domain structures, collecting node geometry, and assembling the reusable Laplacian operator."
+  },
+  {
+    "function_name": "solve",
+    "class_name": "PoissonSolver",
+    "summary": "Solves a Poisson boundary-value problem with forcing and mixed boundary coefficients, adding a nullspace constraint for pure Neumann cases. It returns the physical solution plus assembled operators, right-hand sides, and solve metadata."
+  },
+  {
+    "function_name": "get_laplacian",
+    "class_name": "PoissonSolver",
+    "summary": "Returns the most recently assembled Laplacian operator."
+  },
+  {
+    "function_name": "get_bc_op",
+    "class_name": "PoissonSolver",
+    "summary": "Returns the boundary operator assembled during the most recent solve."
+  },
+  {
+    "function_name": "last_solve_used_nullspace",
+    "class_name": "PoissonSolver",
+    "summary": "Reports whether the most recent Poisson solve used pure-Neumann nullspace augmentation."
+  },
+  {
+    "function_name": "_build_implicit_system",
+    "class_name": "",
+    "summary": "Builds the implicit diffusion sparse system by scaling the localized Laplacian, adding identity on physical rows, and stacking boundary rows."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Initializes a partition-of-unity diffusion solver by building domain structures, patch geometry, a localized Laplacian, and empty state and solve caches."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Updates the time-step size and invalidates cached boundary and implicit solve data."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Seeds the PU diffusion BDF history with one validated physical state and clears higher-order history and caches."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Seeds the PU diffusion BDF history with one, two, or three validated physical states."
+  },
+  {
+    "function_name": "current_physical_state",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Returns the current physical state from the PU diffusion BDF history."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Reports that this solver returns values on its local physical output nodes rather than a distributed full state."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Returns the one-based output index range covering the PU diffusion physical nodes."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Returns the physical output nodes used by the PU diffusion solver."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Performs one first-order implicit PU diffusion step using localized operators, forcing, and boundary data."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Performs one second-order implicit PU diffusion step after one prior step is available."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Performs one third-order implicit PU diffusion step after two prior steps are available."
+  },
+  {
+    "function_name": "_take_step",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Runs the common PU implicit solve by updating boundary data, solving the localized diffusion system, and advancing BDF history."
+  },
+  {
+    "function_name": "_get_boundary_coefficients",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Evaluates and optionally caches boundary coefficient arrays for the current time."
+  },
+  {
+    "function_name": "_ensure_boundary_operator",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Builds or reuses the localized PU boundary operator for the current boundary coefficients."
+  },
+  {
+    "function_name": "_invalidate_implicit_solver",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Clears the cached PU implicit system, preconditioner, and Laplacian scale."
+  },
+  {
+    "function_name": "_ensure_implicit_solver",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Returns a cached PU implicit system for the requested scale or builds the system and ILU preconditioner when needed."
+  },
+  {
+    "function_name": "_push_completed_step",
+    "class_name": "PUDiffusionSolver",
+    "summary": "Rotates and records the PU diffusion BDF state history after a successful solve."
+  },
+  {
+    "function_name": "init",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Stores the shared PU diffusion configuration and clears any existing per-species PU diffusion solvers."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Updates the shared time-step size and propagates it to all existing per-species PU diffusion solvers."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Creates per-species PU diffusion solvers as needed and seeds each one from a column of the input state matrix."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Seeds each per-species PU diffusion solver with matching columns from the supplied history matrices."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with first-order PU diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with second-order PU diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Advances all species with third-order PU diffusion by dispatching column-wise forcing and boundary callbacks."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Reports that the multi-species PU diffusion solver returns local, non-distributed states."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Returns the output range from the first PU diffusion solver, or the domain physical-node range before solvers are created."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Returns output nodes from the first PU diffusion solver, or the domain physical nodes before solvers are created."
+  },
+  {
+    "function_name": "_ensure_solvers",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Creates one PUDiffusionSolver per species on first use and rejects later calls with a different species count."
+  },
+  {
+    "function_name": "_step_columns",
+    "class_name": "MultiSpeciesPUDiffusionSolver",
+    "summary": "Runs the requested BDF step on each species PU solver using callbacks that extract that species column from matrix-valued forcing and boundary data."
+  },
+  {
+    "function_name": "_build_patch_stencil_properties",
+    "class_name": "",
+    "summary": "Creates the stencil properties used for semi-Lagrangian partition-of-unity interpolation patches."
+  },
+  {
+    "function_name": "clear_advection_boundary_condition",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Resets the advection boundary condition configuration to the unspecified mode with default tolerance and no inflow or periodic data."
+  },
+  {
+    "function_name": "set_tangential_flow_boundary",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Configures the advection boundary mode to require tangential flow at the boundary within the given normal-velocity tolerance."
+  },
+  {
+    "function_name": "set_periodic_boundary",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Stores periodic advection boundary configuration and normal-velocity tolerance for later validation."
+  },
+  {
+    "function_name": "set_inflow_dirichlet_boundary",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Configures inflow-Dirichlet advection boundary handling with a callback that supplies inflow values."
+  },
+  {
+    "function_name": "get_advection_boundary_condition",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the current advection boundary-condition configuration dictionary."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Reports that the PU semi-Lagrangian advection solver returns local output-node values rather than a distributed full state."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the configured output index range for the advection solver."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Initializes the PU semi-Lagrangian advection solver by building domain structures, output nodes, patch centers, patch stencils, and a domain-measure estimate."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the nodes where advected coefficients are represented and reported."
+  },
+  {
+    "function_name": "project_initial",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Samples an initial-condition callback at each output node and stores the result as a single-column coefficient array."
+  },
+  {
+    "function_name": "project_constant",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Creates a coefficient matrix filled with a constant value over all output nodes and requested columns."
+  },
+  {
+    "function_name": "project_samples",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Converts supplied nodal samples to a floating-point coefficient array without further projection."
+  },
+  {
+    "function_name": "evaluate_at_nodes",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the supplied coefficients as a floating-point nodal-value array."
+  },
+  {
+    "function_name": "evaluate_at_points",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Evaluates the coefficient field at arbitrary points using localized partition-of-unity interpolation."
+  },
+  {
+    "function_name": "backward_sl_step",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Runs one backward semi-Lagrangian advection step by tracing output nodes backward and sampling old coefficients with boundary handling."
+  },
+  {
+    "function_name": "forward_sl_step",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Runs one forward semi-Lagrangian advection step with defect-correction iterations and optional global mass correction. Inflow-Dirichlet mode falls back to the backward step path."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Updates the semi-Lagrangian advection time-step size."
+  },
+  {
+    "function_name": "reset_solve_stats",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Resets counters that track how many forward defect-correction sweeps were used."
+  },
+  {
+    "function_name": "get_solve_stats",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns a copy of the semi-Lagrangian solve-statistics counters."
+  },
+  {
+    "function_name": "get_num_patches",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the number of partition-of-unity patches currently used by the advection solver."
+  },
+  {
+    "function_name": "get_num_dofs",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the number of advection degrees of freedom, equal to the number of output nodes."
+  },
+  {
+    "function_name": "get_patch_radius",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the patch radius used by the advection solver."
+  },
+  {
+    "function_name": "get_patch_spacing",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the patch-center spacing used by the advection solver."
+  },
+  {
+    "function_name": "total_mass",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Estimates the total mass in one coefficient column as domain measure times the column mean."
+  },
+  {
+    "function_name": "get_domain_measure",
+    "class_name": "PUSLAdvectionSolver",
+    "summary": "Returns the stored estimate of the domain measure used for mass calculations."
+  },
+  {
+    "function_name": "localized_evaluate",
+    "class_name": "",
+    "summary": "Evaluates PU-SL coefficients at arbitrary query points by blending local patch interpolation weights, with nearest-node fallback for uncovered points."
+  },
+  {
+    "function_name": "query_patch_ids_for_advection",
+    "class_name": "",
+    "summary": "Finds advection patch centers within the patch radius for each query point, using the tree when available and a nearest-patch fallback when none cover a query."
+  },
+  {
+    "function_name": "trace_points_backward",
+    "class_name": "",
+    "summary": "Traces points backward over one time step by delegating to the signed tracing helper with a negative step."
+  },
+  {
+    "function_name": "trace_points_forward",
+    "class_name": "",
+    "summary": "Traces points forward over one time step by delegating to the signed tracing helper with a positive step."
+  },
+  {
+    "function_name": "trace_points_signed",
+    "class_name": "",
+    "summary": "Advances points by a signed time step using a supplied Runge-Kutta callback when present, otherwise the built-in RK4 step."
+  },
+  {
+    "function_name": "rk4_step",
+    "class_name": "",
+    "summary": "Performs one classical fourth-order Runge-Kutta update for all points under the provided velocity field."
+  },
+  {
+    "function_name": "apply_boundary_condition",
+    "class_name": "",
+    "summary": "Applies the configured advection boundary condition to traced values, currently handling inflow-Dirichlet samples for outside points and rejecting periodic mode."
+  },
+  {
+    "function_name": "validate_boundary_condition_configuration",
+    "class_name": "",
+    "summary": "Checks that the configured advection boundary mode has the data the solver needs. It rejects periodic mode as unsupported and requires a callable inflow value for inflow-Dirichlet mode."
+  },
+  {
+    "function_name": "point_is_inside_level_set",
+    "class_name": "",
+    "summary": "Tests whether a point is inside or close to the domain level set using a tolerance based on the domain separation radius."
+  },
+  {
+    "function_name": "boundary_normal_velocity",
+    "class_name": "",
+    "summary": "Evaluates the velocity at one boundary point and returns its dot product with the supplied normal, validating the velocity shape."
+  },
+  {
+    "function_name": "validate_tangential_boundary_flow",
+    "class_name": "",
+    "summary": "Checks that the velocity field has negligible normal component on all boundary nodes for a tangential-flow boundary condition."
+  },
+  {
+    "function_name": "inflow_samples",
+    "class_name": "",
+    "summary": "Evaluates the inflow-Dirichlet callback at given points and validates that it returns the expected point-by-column matrix shape."
+  },
+  {
+    "function_name": "boundary_hit_on_segment",
+    "class_name": "",
+    "summary": "Locates a level-set boundary crossing along a segment between an inside point and an outside point using bisection."
+  },
+  {
+    "function_name": "prepare_forward_boundary_data",
+    "class_name": "",
+    "summary": "Adjusts forward semi-Lagrangian traced points and right-hand-side samples for boundary conditions, including inflow values and boundary-hit clipping."
+  },
+  {
+    "function_name": "sample_backward_traced_values",
+    "class_name": "",
+    "summary": "Samples old coefficients at backward-traced points and substitutes inflow-Dirichlet boundary values for traces that leave the domain."
+  },
+  {
+    "function_name": "enforce_global_mass_correction",
+    "class_name": "",
+    "summary": "Adds a constant offset to each coefficient column so its estimated total mass matches the requested target mass."
+  },
+  {
+    "function_name": "estimate_domain_measure",
+    "class_name": "",
+    "summary": "Estimates the domain measure from the level set using a coarse grid in 2D or 3D, falling back to node count times spacing to the dimension when no level set is available."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Initializes the coupled PU-SL advection plus finite-difference diffusion solver, setting timestep, diffusion coefficient, transport direction, component solvers, and empty state history."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Updates the shared timestep on the coupled solver and propagates it to both advection and diffusion components."
+  },
+  {
+    "function_name": "set_transport_direction",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Stores the requested transport direction string in lower case for later advection transport calls."
+  },
+  {
+    "function_name": "enable_homogeneous_neumann_mass_conservation",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Compatibility helper that enables or disables the same mass constraint controlled by enable_mass_constraint."
+  },
+  {
+    "function_name": "enable_mass_constraint",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Turns mass-constraint enforcement on or off and, when enabling without an explicit target, initializes the target from the current state if available."
+  },
+  {
+    "function_name": "disable_mass_constraint",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Disables mass-constraint enforcement for future coupled steps."
+  },
+  {
+    "function_name": "set_mass_constraint_target",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Sets an explicit target mass and enables mass-constraint enforcement."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Stores one physical state as the starting history and initializes the mass target when mass conservation is enabled."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Seeds the coupled solver with one, two, or three physical history states and updates the completed-step count."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Returns the output nodes from the advection component."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Returns the output range from the advection component."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Reports the distributed-state behavior of the advection component."
+  },
+  {
+    "function_name": "advection_solver",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Returns the PU-SL advection component used by the coupled solver."
+  },
+  {
+    "function_name": "diffusion_solver",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Returns the finite-difference diffusion component used by the coupled solver."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Performs one first-order operator-split advection-diffusion step by transporting the previous state, solving a BDF1 diffusion step, optionally adding reaction forcing, and enforcing mass when configured."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Performs one second-order operator-split advection-diffusion step by transporting two history states, solving a BDF2 diffusion step, optionally extrapolating reaction forcing, and enforcing mass when configured."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Performs one third-order operator-split advection-diffusion step by transporting three history states, solving a BDF3 diffusion step, optionally extrapolating reaction forcing, and rotating history."
+  },
+  {
+    "function_name": "current_state",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Returns the latest state in the coupled solver history."
+  },
+  {
+    "function_name": "total_mass",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Estimates the mass of a local state using the advection component mass calculation."
+  },
+  {
+    "function_name": "_transport_state",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Transports a stored state over one or more timesteps using the configured forward or backward PU-SL advection direction, then optionally enforces the mass target."
+  },
+  {
+    "function_name": "_evaluate_forcing",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Evaluates a forcing input at the coupled solver output nodes using the shared diffusion coefficient and requested time."
+  },
+  {
+    "function_name": "_combine_forcing",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Builds a forcing callback that adds precomputed reaction values to the base forcing values."
+  },
+  {
+    "function_name": "_combine_forcing.combined",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Evaluates the base forcing callback and adds the captured reaction values after checking that the reaction vector matches the requested point count."
+  },
+  {
+    "function_name": "_evaluate_reaction",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Evaluates a reaction callback using one of the supported signatures and validates that it returns one value per output point."
+  },
+  {
+    "function_name": "_initialize_mass_constraint_target",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Initializes the mass-constraint target from a reference state when mass enforcement is enabled and no explicit target was set."
+  },
+  {
+    "function_name": "_enforce_mass_target",
+    "class_name": "PUSLFDAdvectionDiffusionSolver",
+    "summary": "Adds a constant offset to a state so its estimated total mass matches the target mass."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUSLFDAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent first-order coupled advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUSLFDAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent second-order coupled advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUSLFDAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent third-order coupled advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "clear_advection_boundary_condition",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Delegates to the underlying scalar PU-SL advection solver to reset boundary-condition configuration."
+  },
+  {
+    "function_name": "set_tangential_flow_boundary",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Delegates tangential-flow boundary configuration to the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "set_periodic_boundary",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Delegates periodic boundary configuration to the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "set_inflow_dirichlet_boundary",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Delegates inflow-Dirichlet boundary configuration to the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "get_advection_boundary_condition",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the boundary-condition configuration from the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Reports the distributed-state behavior of the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the output range from the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "init",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Initializes the multi-species PU-SL advection wrapper with a positive species count and initializes the shared scalar advection solver."
+  },
+  {
+    "function_name": "get_num_species",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the configured number of species columns."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns output nodes from the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "project_initial",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Samples a vector-valued initial-condition callback at each output node and validates that it returns one value per species."
+  },
+  {
+    "function_name": "project_constant",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Creates a coefficient matrix filled with the same constant for every species and output node."
+  },
+  {
+    "function_name": "project_constants",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Creates a coefficient matrix by repeating one provided constant value per species across all output nodes."
+  },
+  {
+    "function_name": "project_samples",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species-column count and delegates sample projection to the underlying scalar advection solver."
+  },
+  {
+    "function_name": "evaluate_at_nodes",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species-column count and delegates nodal evaluation to the underlying scalar advection solver."
+  },
+  {
+    "function_name": "evaluate_at_points",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species-column count and delegates point evaluation to the underlying scalar advection solver."
+  },
+  {
+    "function_name": "forward_sl_step",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species-column count and advances all species columns with the underlying forward PU-SL advection step."
+  },
+  {
+    "function_name": "backward_sl_step",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species-column count and advances all species columns with the underlying backward PU-SL advection step."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Updates the time-step size on the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "reset_solve_stats",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Resets solve-statistics counters on the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "get_solve_stats",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns solve-statistics counters from the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "get_num_patches",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the number of patches used by the underlying scalar PU-SL advection solver."
+  },
+  {
+    "function_name": "get_num_dofs_per_species",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the number of degrees of freedom per species from the underlying scalar solver."
+  },
+  {
+    "function_name": "get_total_dofs",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the total number of degrees of freedom across all species."
+  },
+  {
+    "function_name": "get_patch_radius",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the patch radius used by the underlying scalar solver."
+  },
+  {
+    "function_name": "get_patch_spacing",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the patch spacing used by the underlying scalar solver."
+  },
+  {
+    "function_name": "total_mass",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species matrix and returns the estimated mass for the requested species column."
+  },
+  {
+    "function_name": "total_masses",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Validates the species matrix and returns estimated masses for all species columns."
+  },
+  {
+    "function_name": "get_domain_measure",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Returns the domain-measure estimate from the underlying scalar solver."
+  },
+  {
+    "function_name": "_ensure_initialized",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Raises an error if the multi-species advection wrapper has not been initialized with a positive species count."
+  },
+  {
+    "function_name": "_validate_species_matrix",
+    "class_name": "MultiSpeciesPUSLAdvectionSolver",
+    "summary": "Checks that an input array has the configured number of species columns for the calling operation."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Initializes the coupled PU-SL advection plus PU diffusion solver, setting timestep, diffusion coefficient, transport direction, component solvers, and empty state history."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Updates the shared timestep on the coupled solver and propagates it to both advection and diffusion components."
+  },
+  {
+    "function_name": "set_transport_direction",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Stores the requested transport direction string in lower case for later advection transport calls."
+  },
+  {
+    "function_name": "enable_homogeneous_neumann_mass_conservation",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Compatibility helper that enables or disables the same mass constraint controlled by enable_mass_constraint."
+  },
+  {
+    "function_name": "enable_mass_constraint",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Turns mass-constraint enforcement on or off and, when enabling without an explicit target, initializes the target from the current state if available."
+  },
+  {
+    "function_name": "disable_mass_constraint",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Disables mass-constraint enforcement for future coupled steps."
+  },
+  {
+    "function_name": "set_mass_constraint_target",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Sets an explicit target mass and enables mass-constraint enforcement."
+  },
+  {
+    "function_name": "set_initial_state",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Stores one physical state as the starting history and initializes the mass target when mass conservation is enabled."
+  },
+  {
+    "function_name": "set_state_history",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Seeds the coupled solver with one, two, or three physical history states and updates the completed-step count."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Returns the output nodes from the advection component."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Returns the output range from the advection component."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Reports the distributed-state behavior of the advection component."
+  },
+  {
+    "function_name": "advection_solver",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Returns the PU-SL advection component used by the coupled solver."
+  },
+  {
+    "function_name": "diffusion_solver",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Returns the partition-of-unity diffusion component used by the coupled solver."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Performs one first-order operator-split PU advection-diffusion step by transporting the previous state, solving a BDF1 PU diffusion step, optionally adding reaction forcing, and enforcing mass when configured."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Performs one second-order operator-split PU advection-diffusion step by transporting two history states, solving a BDF2 PU diffusion step, optionally extrapolating reaction forcing, and enforcing mass when configured."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Performs one third-order operator-split PU advection-diffusion step by transporting three history states, solving a BDF3 PU diffusion step, optionally extrapolating reaction forcing, and rotating history."
+  },
+  {
+    "function_name": "current_state",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Returns the latest state in the coupled solver history."
+  },
+  {
+    "function_name": "total_mass",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Estimates the mass of a local state using the advection component mass calculation."
+  },
+  {
+    "function_name": "_transport_state",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Transports a stored state over one or more timesteps using the configured forward or backward PU-SL advection direction, then optionally enforces the mass target."
+  },
+  {
+    "function_name": "_evaluate_forcing",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Evaluates a forcing input at the coupled solver output nodes using the shared diffusion coefficient and requested time."
+  },
+  {
+    "function_name": "_combine_forcing",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Builds a forcing callback that adds precomputed reaction values to the base forcing values."
+  },
+  {
+    "function_name": "_combine_forcing.combined",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Evaluates the base forcing callback and adds the captured reaction values after checking that the reaction vector matches the requested point count."
+  },
+  {
+    "function_name": "_evaluate_reaction",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Evaluates a reaction callback using one of the supported signatures and validates that it returns one value per output point."
+  },
+  {
+    "function_name": "_initialize_mass_constraint_target",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Initializes the mass-constraint target from a reference state when mass enforcement is enabled and no explicit target was set."
+  },
+  {
+    "function_name": "_enforce_mass_target",
+    "class_name": "PUSLPUAdvectionDiffusionSolver",
+    "summary": "Adds a constant offset to a state so its estimated total mass matches the target mass."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUSLPUAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent first-order coupled PU advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUSLPUAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent second-order coupled PU advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUSLPUAdvectionDiffusionReactionSolver",
+    "summary": "Calls the parent third-order coupled PU advection-diffusion step while requiring and passing a reaction callback."
+  },
+  {
+    "function_name": "build_variable_pde_operator",
+    "class_name": "",
+    "summary": "Builds the sparse variable-coefficient Poisson operator for -div(a grad u) from a Laplacian, gradient operators, and coefficient values."
+  },
+  {
+    "function_name": "build_variable_system_matrix",
+    "class_name": "",
+    "summary": "Stacks a variable-coefficient PDE operator and boundary operator into one sparse system, optionally adding the pure-Neumann nullspace constraint row and column."
+  },
+  {
+    "function_name": "init",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Initializes the variable-coefficient Poisson solver by building domain structures and assembling reusable Laplacian and coordinate-gradient operators."
+  },
+  {
+    "function_name": "solve",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Solves a positive scalar variable-coefficient Poisson problem with mixed boundary conditions and optional initial guess. It builds the variable PDE operator for the supplied coefficient field and returns the solution, operators, right-hand sides, and nullspace metadata."
+  },
+  {
+    "function_name": "get_laplacian",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns the assembled Laplacian operator."
+  },
+  {
+    "function_name": "returns_distributed_state",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Reports that the variable Poisson solver returns local physical output values rather than a distributed full state."
+  },
+  {
+    "function_name": "get_output_range",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns the zero-based output range covering the solver physical nodes."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns the physical nodes where the variable Poisson solution is reported."
+  },
+  {
+    "function_name": "get_gradient_ops",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns copies of the assembled coordinate-gradient operators."
+  },
+  {
+    "function_name": "get_last_pde_operator",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns the variable-coefficient PDE operator from the most recent solve."
+  },
+  {
+    "function_name": "get_bc_op",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Returns the boundary operator from the most recent solve."
+  },
+  {
+    "function_name": "last_solve_used_nullspace",
+    "class_name": "VariablePoissonSolver",
+    "summary": "Reports whether the most recent solve used pure-Neumann nullspace augmentation."
+  },
+  {
+    "function_name": "returnsDistributedState",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for returns_distributed_state."
+  },
+  {
+    "function_name": "getOutputRange",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_output_range."
+  },
+  {
+    "function_name": "getOutputNodes",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_output_nodes."
+  },
+  {
+    "function_name": "getLaplacian",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_laplacian."
+  },
+  {
+    "function_name": "getGradientOps",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_gradient_ops."
+  },
+  {
+    "function_name": "getLastPdeOperator",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_last_pde_operator."
+  },
+  {
+    "function_name": "getBCOp",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for get_bc_op."
+  },
+  {
+    "function_name": "lastSolveUsedNullspace",
+    "class_name": "VariablePoissonSolver",
+    "summary": "CamelCase compatibility wrapper for last_solve_used_nullspace."
+  }
+]

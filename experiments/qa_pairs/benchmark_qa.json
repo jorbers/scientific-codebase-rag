@@ -1,0 +1,26 @@
+[
+  {
+    "query": "how to create an RBF-FD differentiation matrix?",
+    "expected_answer": "Use the RBF-FD assembly classes in kernelpack.rbffd. First create stencil parameters with StencilProperties.from_accuracy(...), for example StencilProperties.from_accuracy(operator=\"lap\", convergence_order=4, dimension=domain.get_dim(), approximation=\"rbf\", tree_mode=\"all\", point_set=\"interior_boundary\"). Create operator options with OpProperties(...), then instantiate FDDiffOp(lambda: RBFStencil()) and call assemble_op(domain, op_name, st_props, op_props). For a Laplacian, use op_name=\"lap\"; for a first derivative/gradient, use op_name=\"grad\" and set OpProperties(selectdim=d) for the coordinate direction. Retrieve the sparse differentiation matrix with get_op(), which returns a scipy.sparse.csr_matrix. FDODiffOp has the same assemble_op API for overlapped assembly.",
+    "tier": "workflow",
+    "module": "kernelpack",
+    "source_symbol": "FDDiffOp.assemble_op",
+    "source_file": "src/kernelpack/rbffd/core.py"
+  },
+  {
+    "query": "how to define an ellipse boundary and generate nodes?",
+    "expected_answer": "Create ellipse boundary samples yourself as a NumPy array, e.g. t = np.linspace(0.0, 2.0 * np.pi, n, endpoint=False) and curve = np.column_stack([a * np.cos(t), b * np.sin(t)]). Pass those points to EmbeddedSurface.set_data_sites(curve), fit the closed 2D geometry with EmbeddedSurface.build_closed_geometric_model_ps(dim=2, rad=h, nb=curve.shape[0]), and build the level set with EmbeddedSurface.build_level_set_from_geometric_model(). Then create DomainNodeGenerator() and call build_domain_descriptor_from_geometry(surface, radius, **kwargs). The generator uses the geometry's sample sites/normals and level set, creates boundary nodes xb, ghost nodes xg = xb + 0.5 * radius * nrmls, stores normals, sep_rad, and level-set metadata in a DomainDescriptor, and returns that descriptor. You can inspect nodes with DomainDescriptor.get_interior_nodes(), get_bdry_nodes(), get_ghost_nodes(), or get_int_bdry_nodes().",
+    "tier": "workflow",
+    "module": "kernelpack",
+    "source_symbol": "DomainNodeGenerator.build_domain_descriptor_from_geometry",
+    "source_file": "src/kernelpack/nodes/core.py"
+  },
+  {
+    "query": "how to step diffusion forward in time?",
+    "expected_answer": "Use DiffusionSolver from kernelpack.solvers. Construct it with optional assembler/stencil selectors such as DiffusionSolver(lap_assembler=\"fd\", bc_assembler=\"fd\", lap_stencil=\"rbf\", bc_stencil=\"rbf\"), then call init(domain, xi, dlt, d_coeff, num_omp_threads=1), where dlt is the time step and d_coeff is the diffusivity. Seed the state with set_initial_state(c0), where c0 has length equal to the interior+boundary physical node count. Advance with bdf1_step(t, forcing, neu_coeff_func, dir_coeff_func, bc); after one completed step you may call bdf2_step with the same argument pattern, and after two completed steps you may call bdf3_step. The forcing callback is adapted by evaluate_forcing_callback and may accept (nu, t, x), (t, x), or x. Boundary coefficient callbacks are evaluated on boundary nodes, and bc may accept (neu_coeff, dir_coeff, nr, t, xb), (t, xb), or xb. Each BDF step returns the current physical state as a NumPy array.",
+    "tier": "workflow",
+    "module": "kernelpack",
+    "source_symbol": "DiffusionSolver.bdf1_step",
+    "source_file": "src/kernelpack/solvers/diffusion.py"
+  }
+]

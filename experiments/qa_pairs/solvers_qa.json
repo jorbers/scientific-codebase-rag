@@ -1,0 +1,82 @@
+[
+  {
+    "query": "If my Poisson problem has only Neumann boundary data, how is the constant nullspace removed?",
+    "expected_answer": "It treats the problem as pure Neumann when max(abs(dir_coeff)) <= 1e-13. The sparse system is augmented with a column and row of ones, last_solve_used_nullspace_ is set to True, full_state is sol[:-1], and lagrange_multiplier is sol[-1].",
+    "tier": "conceptual",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PoissonSolver.solve",
+    "source_file": "src/kernelpack/solvers/poisson.py"
+  },
+  {
+    "query": "How is the variable-coefficient operator -div(a grad u) represented in the discretization?",
+    "expected_answer": "It discretizes -div(a grad u). The assembled matrix starts with -diag(a on target rows) @ lap and subtracts diag(grad_i a) @ grad_i for each cached gradient operator.",
+    "tier": "conceptual",
+    "module": "kernelpack.solvers",
+    "source_symbol": "VariablePoissonSolver.solve",
+    "source_file": "src/kernelpack/solvers/variable_poisson.py"
+  },
+  {
+    "query": "How can I adjust Newton and linear-solver tolerances before running a nonlinear Poisson solve?",
+    "expected_answer": "set_nonlinear_tolerance(tol) sets nonlinear_tol, set_linear_tolerance(tol) sets linear_tol, and set_max_nonlinear_iterations(max_it) stores max(1, int(max_it)). The camelCase aliases setNonlinearTolerance, setLinearTolerance, and setMaxNonlinearIterations delegate to those methods.",
+    "tier": "api",
+    "module": "kernelpack.solvers",
+    "source_symbol": "NonlinearVariablePoissonSolver.set_nonlinear_tolerance",
+    "source_file": "src/kernelpack/solvers/nonlinear_variable_poisson.py"
+  },
+  {
+    "query": "What right-hand-side formulas are used for the first-, second-, and third-order BDF diffusion steps?",
+    "expected_answer": "bdf1_step uses previous + dt*f and lap_scale=-nu*dt. bdf2_step uses (4/3)*cnm1 - (1/3)*cnm2 + (2/3)*dt*f and lap_scale=-(2/3)*nu*dt. bdf3_step uses (18/11)*cn - (9/11)*cnm1 + (2/11)*cnm2 + (6/11)*dt*f and lap_scale=-(6/11)*nu*dt.",
+    "tier": "api",
+    "module": "kernelpack.solvers",
+    "source_symbol": "DiffusionSolver.bdf3_step",
+    "source_file": "src/kernelpack/solvers/diffusion.py"
+  },
+  {
+    "query": "How does the partition-of-unity diffusion discretization build Laplacian and boundary rows compared with the standard diffusion solver?",
+    "expected_answer": "PUDiffusionSolver.init builds patch_data = pu_patch_geometry(domain, xi) and self.lap = pu_localized_operator(domain, patch_data, xi, self.x, \"lap\"). During stepping it builds self.bc with pu_localized_operator(..., self.xb, \"bc\", normals=self.nr, neu_coeff=neu_coeff, dir_coeff=dir_coeff). It does not use make_assembler/FDDiffOp for these operators.",
+    "tier": "conceptual",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PUDiffusionSolver.init",
+    "source_file": "src/kernelpack/solvers/pu_diffusion.py"
+  },
+  {
+    "query": "When advancing multiple species with the same diffusivity, what shapes should forcing and boundary callbacks return?",
+    "expected_answer": "The wrapper calls forcing(nu, time, x) and slices [:, species] for each child solver. It also calls bc(neu_coeffs, dir_coeffs, nr, time, xb) and slices [:, species]. The same neu_coeff_func and dir_coeff_func are reused for all species.",
+    "tier": "api",
+    "module": "kernelpack.solvers",
+    "source_symbol": "MultiSpeciesDiffusionSolver.bdf1_step",
+    "source_file": "src/kernelpack/solvers/multispecies_diffusion.py"
+  },
+  {
+    "query": "For heterogeneous multispecies diffusion, what callback signatures should my source and boundary functions implement?",
+    "expected_answer": "For species j, forcing is called as forcing(species, nu, time, x), neu_coeff_func as neu_coeff_func(species, time, xb), dir_coeff_func as dir_coeff_func(species, time, xb), and bc as bc(species, neu_coeffs, dir_coeffs, nr, time, xb). Each result is reshaped for the scalar child solver.",
+    "tier": "api",
+    "module": "kernelpack.solvers",
+    "source_symbol": "HeterogeneousMultiSpeciesDiffusionSolver.bdf1_step",
+    "source_file": "src/kernelpack/solvers/heterogeneous_multispecies_diffusion.py"
+  },
+  {
+    "query": "Can I use periodic boundary conditions with PU semi-Lagrangian advection, or is that mode still unsupported?",
+    "expected_answer": "When asked about PUSLAdvectionSolver.set_periodic_boundary or periodic boundary mode: the setter stores mode=\"periodic\" and periodic_patches, but validate_boundary_condition_configuration raises because robust periodic PU-SL transport is not implemented, and apply_boundary_condition also raises ValueError for periodic mode.",
+    "tier": "workflow",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PUSLAdvectionSolver.set_periodic_boundary",
+    "source_file": "src/kernelpack/solvers/pu_sl_advection.py"
+  },
+  {
+    "query": "In a coupled semi-Lagrangian advection-diffusion solve, what happens during the first BDF step?",
+    "expected_answer": "bdf1_step requires state_nm2. It transports state_nm2 from t_next - dt over one step with _transport_state, seeds the diffusion solver with set_state_history(transported_nm2), optionally evaluates reaction at t_next on the transported state and combines it with forcing, then calls diffusion.bdf1_step(t_next, combined_forcing, neu_coeff_func, dir_coeff_func, bc).",
+    "tier": "workflow",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PUSLFDAdvectionDiffusionSolver.bdf1_step",
+    "source_file": "src/kernelpack/solvers/pu_sl_fd_advection_diffusion.py"
+  },
+  {
+    "query": "How do I set up an advection-diffusion split where both advection and diffusion use partition-of-unity machinery?",
+    "expected_answer": "PUSLPUAdvectionDiffusionSolver.init(domain, xi_sl, xi_pu, dt, nu, direction=\"backward\", num_omp_threads=1) initializes the same PUSLAdvectionSolver for transport but uses PUDiffusionSolver.init(domain, xi_pu, dt, nu, num_omp_threads) for diffusion. The PU-specific diffusion accuracy argument is xi_pu.",
+    "tier": "api",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PUSLPUAdvectionDiffusionSolver.init",
+    "source_file": "src/kernelpack/solvers/pu_sl_pu_advection_diffusion.py"
+  }
+]
