@@ -165,6 +165,166 @@
     "summary": "Returns a new StencilProperties object containing the same stored fields as the input properties."
   },
   {
+    "function_name": "_strip_ghosts",
+    "class_name": "",
+    "summary": "Creates a velocity-domain descriptor without ghost nodes by keeping interior and boundary nodes plus boundary geometry from the original velocity domain. It rebuilds the domain structures before returning it."
+  },
+  {
+    "function_name": "_with_point_set_tree",
+    "class_name": "",
+    "summary": "Returns a copy of stencil properties with the requested point set and tree mode while preserving the other stencil parameters."
+  },
+  {
+    "function_name": "_boundary_normal_matrix",
+    "class_name": "",
+    "summary": "Builds the sparse matrix that maps flattened velocity unknowns to boundary normal velocity values at boundary nodes."
+  },
+  {
+    "function_name": "_boundary_lambda_matrix",
+    "class_name": "",
+    "summary": "Builds the sparse matrix that injects boundary Lagrange multiplier forces into the flattened velocity equations along boundary normals."
+  },
+  {
+    "function_name": "_block_divergence_matrix",
+    "class_name": "",
+    "summary": "Horizontally stacks per-coordinate divergence operators into one sparse block acting on flattened vector velocity fields."
+  },
+  {
+    "function_name": "_block_gradient_matrix",
+    "class_name": "",
+    "summary": "Vertically stacks scaled per-coordinate pressure-gradient operators into one sparse block for the velocity equations."
+  },
+  {
+    "function_name": "init",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Initializes the incompressible Euler BDF backend with dual velocity/pressure domains, stencil properties, timestep, physical-node data, and cross-node gradient/divergence operators. It also resets velocity history and cached linear systems."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Updates the backend timestep after validating it is positive. Cached systems and preconditioners are cleared because the timestep changes the assembled saddle-point system."
+  },
+  {
+    "function_name": "set_initial_velocity",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Validates and stores the initial physical velocity state, clears later history slots, and marks that no BDF steps have completed."
+  },
+  {
+    "function_name": "set_initial_velocity_owned",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Stores an initial velocity state and marks the velocity history as node-owned/local data."
+  },
+  {
+    "function_name": "set_velocity_history",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Sets one to three velocity history states using the shared validation path and marks them as not node-owned."
+  },
+  {
+    "function_name": "set_velocity_history_owned",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Sets one to three velocity history states using the shared validation path and marks them as node-owned/local data."
+  },
+  {
+    "function_name": "get_owned_pressure_range",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Returns the one-based pressure node range owned by this backend."
+  },
+  {
+    "function_name": "gather_pressure_samples",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Converts pressure samples to a floating-point NumPy array and returns them unchanged."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Runs a first-order BDF incompressible Euler solve after confirming an initial velocity is available. It delegates to the shared BDF solve with first-order history coefficients."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Runs a second-order BDF incompressible Euler solve after confirming one prior step exists. It delegates to the shared BDF solve with second-order history coefficients."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Runs a third-order BDF incompressible Euler solve after confirming two prior steps exist. It delegates to the shared BDF solve with third-order history coefficients."
+  },
+  {
+    "function_name": "stationary_slip_wall",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Builds a slip-wall problem entry for the given one-based boundary indices with zero prescribed normal velocity."
+  },
+  {
+    "function_name": "default_problem_definition",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Returns the default incompressible Euler boundary/gauge problem definition, with no slip walls and automatic pressure gauge handling."
+  },
+  {
+    "function_name": "_set_velocity_history_impl",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Validates and stores one to three velocity history arrays, records whether they are node-owned, and updates the completed-step counter to match the supplied history."
+  },
+  {
+    "function_name": "_assemble_operators",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Assembles cross-node RBF-FD gradient operators from pressure nodes to velocity nodes and divergence operators from velocity nodes to pressure nodes for each coordinate direction."
+  },
+  {
+    "function_name": "_solve_bdf_step",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Assembles and solves the saddle-point BDF system for velocity, pressure, and boundary normal constraints with optional pressure gauge augmentation. It updates velocity history and returns the new fields plus divergence and wall-normal diagnostics."
+  },
+  {
+    "function_name": "_get_cached_system",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Builds or retrieves the sparse block system and ILU preconditioner for a given BDF coefficient and pressure-gauge choice. The system couples velocity identity, pressure gradient, divergence, boundary normal constraints, and optional pressure-mean gauge rows."
+  },
+  {
+    "function_name": "_initial_guess",
+    "class_name": "IncompressibleEulerBDFBackend",
+    "summary": "Constructs the initial guess vector for the backend linear solve from the most recent available velocity state plus zero pressure, wall multiplier, and optional gauge entries."
+  },
+  {
+    "function_name": "_validate_velocity_state",
+    "class_name": "",
+    "summary": "Checks that a velocity state has the backend physical-node shape, the domain dimension as columns, and only finite values."
+  },
+  {
+    "function_name": "_normalize_problem",
+    "class_name": "",
+    "summary": "Fills in a missing or partial Euler problem dictionary with default slip-wall and pressure-gauge options."
+  },
+  {
+    "function_name": "_validate_problem",
+    "class_name": "",
+    "summary": "Validates that slip-wall boundary indices are one-based, in range, and cover every boundary node exactly once."
+  },
+  {
+    "function_name": "_prepare_wall_data",
+    "class_name": "",
+    "summary": "Evaluates each slip-wall normal-velocity callback on its boundary nodes and assembles the full boundary normal velocity vector."
+  },
+  {
+    "function_name": "_build_history_rhs",
+    "class_name": "",
+    "summary": "Forms the BDF history contribution from the available stored velocity states and supplied history coefficients, then applies the requested scale."
+  },
+  {
+    "function_name": "_pressure_constant_is_null",
+    "class_name": "",
+    "summary": "Determines whether the pressure constant mode should be treated as a nullspace requiring a gauge constraint, using explicit gauge options or an automatic gradient residual check."
+  },
+  {
+    "function_name": "_divergence_diagnostics",
+    "class_name": "",
+    "summary": "Computes RMS and maximum discrete divergence of a velocity field using the backend divergence operators."
+  },
+  {
+    "function_name": "_wall_diagnostics",
+    "class_name": "",
+    "summary": "Computes RMS and maximum residual between boundary normal velocity from the solution and the prescribed wall-normal velocity values."
+  },
+  {
     "function_name": "init",
     "class_name": "DiffusionSolver",
     "summary": "Initializes the diffusion solver by storing the domain, timestep, diffusion coefficient, and threading settings, then assembling the reusable Laplacian operator and clearing step history and caches."
@@ -348,6 +508,136 @@
     "function_name": "_step_columns",
     "class_name": "HeterogeneousMultiSpeciesPUDiffusionSolver",
     "summary": "Runs the requested BDF step for each PU species solver with callback adapters that pass species index and that species diffusion coefficient."
+  },
+  {
+    "function_name": "_make_physical_advection_domain",
+    "class_name": "",
+    "summary": "Builds the physical-node advection domain for the wrapper by removing ghost nodes while preserving boundary geometry and level-set metadata from the velocity domain."
+  },
+  {
+    "function_name": "clear_advection_boundary_condition",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Clears the boundary-condition configuration on the underlying partition-of-unity semi-Lagrangian advection solver."
+  },
+  {
+    "function_name": "set_tangential_flow_boundary",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Configures the underlying advection solver to require tangential boundary flow up to the supplied normal-velocity tolerance."
+  },
+  {
+    "function_name": "set_inflow_dirichlet_boundary",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Configures the underlying advection solver to apply Dirichlet inflow values at boundary inflow points, with validation of normal velocity tolerance."
+  },
+  {
+    "function_name": "init",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Initializes the coupled PU semi-Lagrangian incompressible Euler solver by building the advection domain, advection solver, backend BDF solver, node arrays, and empty velocity-coefficient history."
+  },
+  {
+    "function_name": "set_step_size",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Updates the timestep on both the semi-Lagrangian advection solver and incompressible Euler BDF backend after validating it is positive."
+  },
+  {
+    "function_name": "set_initial_velocity",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Normalizes a physical velocity field, projects it into advection coefficients, resets time history, and initializes the backend with the local velocity samples."
+  },
+  {
+    "function_name": "set_velocity_history",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Normalizes one to three physical velocity fields, projects them into advection coefficient history, updates completed-step state, and passes the samples to the backend."
+  },
+  {
+    "function_name": "get_interior_nodes",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Returns the interior velocity nodes used by the coupled Euler solver."
+  },
+  {
+    "function_name": "get_output_nodes",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Returns the physical nodes where the coupled Euler velocity is represented and reported."
+  },
+  {
+    "function_name": "get_domain",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Returns the dual-node domain descriptor used by the coupled incompressible Euler solver."
+  },
+  {
+    "function_name": "advection_solver",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Returns the underlying partition-of-unity semi-Lagrangian advection solver."
+  },
+  {
+    "function_name": "euler_backend",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Returns the underlying incompressible Euler BDF backend solver."
+  },
+  {
+    "function_name": "bdf1_step",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Advects the initial velocity coefficients to the next physical nodes, loads that transported state into the backend, and performs a first-order BDF Euler solve. The resulting velocity is projected back into advection coefficients for later steps."
+  },
+  {
+    "function_name": "bdf2_step",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Uses an extrapolated velocity field to transport the previous two coefficient states, loads them into the backend, and performs a second-order BDF Euler solve. The result is projected for use as the newest coefficient history."
+  },
+  {
+    "function_name": "bdf3_step",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Uses an extrapolated velocity field to transport the previous three coefficient states, loads them into the backend, and performs a third-order BDF Euler solve. It advances the stored coefficient history with the newly solved velocity."
+  },
+  {
+    "function_name": "current_interior_velocity",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Evaluates the most recent velocity coefficients at interior velocity nodes, or returns an empty zero-shaped array when no coefficients are available."
+  },
+  {
+    "function_name": "current_physical_velocity",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Evaluates the most recent velocity coefficients at the solver physical output nodes, or returns an empty zero-shaped array when no coefficients are available."
+  },
+  {
+    "function_name": "evaluate_current_velocity_at_points",
+    "class_name": "PUSLIncompressibleEulerSolver",
+    "summary": "Evaluates the most recent velocity coefficient field at arbitrary query points, returning zeros when the solver has no current coefficients."
+  },
+  {
+    "function_name": "_normalize_local_physical_velocity",
+    "class_name": "",
+    "summary": "Converts a velocity array to floating point and checks that it has the domain dimension, finite values, and either local or global physical-node row count."
+  },
+  {
+    "function_name": "_force_at",
+    "class_name": "",
+    "summary": "Wraps a time-dependent body-force callback into a spatial callback fixed at one time."
+  },
+  {
+    "function_name": "_extrapolation_weights",
+    "class_name": "",
+    "summary": "Computes first-, second-, or third-order extrapolation weights for a normalized time offset."
+  },
+  {
+    "function_name": "_extrapolated_velocity_callback",
+    "class_name": "",
+    "summary": "Creates a velocity callback that evaluates stored advection coefficients and combines them with order-appropriate extrapolation weights."
+  },
+  {
+    "function_name": "_extrapolated_velocity_callback.velocity",
+    "class_name": "",
+    "summary": "Evaluates the extrapolated velocity at query points using the available coefficient history, falling back to zeros or lower-order extrapolation when history is incomplete."
+  },
+  {
+    "function_name": "_transport_to_physical",
+    "class_name": "",
+    "summary": "Repeatedly applies backward semi-Lagrangian advection steps to a coefficient state and evaluates the transported result at physical output nodes."
+  },
+  {
+    "function_name": "_current_coefficients",
+    "class_name": "",
+    "summary": "Selects the most recent stored advection coefficient array according to how many Euler steps have completed."
   },
   {
     "function_name": "init",

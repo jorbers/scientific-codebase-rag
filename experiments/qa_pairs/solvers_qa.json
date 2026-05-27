@@ -1,82 +1,82 @@
 [
   {
-    "query": "If my Poisson problem has only Neumann boundary data, how is the constant nullspace removed?",
-    "expected_answer": "It treats the problem as pure Neumann when max(abs(dir_coeff)) <= 1e-13. The sparse system is augmented with a column and row of ones, last_solve_used_nullspace_ is set to True, full_state is sol[:-1], and lagrange_multiplier is sol[-1].",
-    "tier": "conceptual",
+    "query": "After running a pure Neumann elliptic benchmark, how can I record whether the constant-mode constraint was actually applied?",
+    "expected_answer": "The stationary Poisson path treats the problem as pure Neumann when the maximum absolute Dirichlet coefficient is at most 1e-13. In that case it augments the sparse system with an all-ones row and column, stores the boolean on the solver, and returns the same information as `used_nullspace_augmentation` plus a `lagrange_multiplier` in the result dictionary. The stored boolean can be queried afterward through the nullspace-status accessor.",
+    "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "PoissonSolver.solve",
+    "source_symbol": "PoissonSolver.last_solve_used_nullspace",
     "source_file": "src/kernelpack/solvers/poisson.py"
   },
   {
-    "query": "How is the variable-coefficient operator -div(a grad u) represented in the discretization?",
-    "expected_answer": "It discretizes -div(a grad u). The assembled matrix starts with -diag(a on target rows) @ lap and subtracts diag(grad_i a) @ grad_i for each cached gradient operator.",
-    "tier": "conceptual",
+    "query": "For a variable-coefficient Poisson equation, what arrays and sparse operators should I expect back for a reproducible scientific implementation?",
+    "expected_answer": "The variable-coefficient Poisson computation evaluates the coefficient on all nodes, rejects nonpositive coefficient values, builds the coefficient-dependent PDE operator from the Laplacian and gradient operators, assembles the boundary operator, and returns a dictionary containing `u`, `full_state`, `coefficient`, `L`, `Grad`, `PDE`, `BC`, `system_matrix`, `rhs`, `target_rhs`, `boundary_rhs`, `used_nullspace_augmentation`, and `lagrange_multiplier`.",
+    "tier": "api",
     "module": "kernelpack.solvers",
     "source_symbol": "VariablePoissonSolver.solve",
     "source_file": "src/kernelpack/solvers/variable_poisson.py"
   },
   {
-    "query": "How can I adjust Newton and linear-solver tolerances before running a nonlinear Poisson solve?",
-    "expected_answer": "set_nonlinear_tolerance(tol) sets nonlinear_tol, set_linear_tolerance(tol) sets linear_tol, and set_max_nonlinear_iterations(max_it) stores max(1, int(max_it)). The camelCase aliases setNonlinearTolerance, setLinearTolerance, and setMaxNonlinearIterations delegate to those methods.",
+    "query": "How do I report the final residual norm after a nonlinear coefficient Poisson run in a peer-reviewed implementation?",
+    "expected_answer": "The nonlinear variable-coefficient solver records the residual norm at each Newton-like iteration in an internal field. On success, the returned result dictionary includes `residual_norm`, and the same final scalar is available through the residual diagnostic accessor. If convergence is not reached within the configured maximum iteration count, the solver raises a RuntimeError that includes the last residual norm.",
     "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "NonlinearVariablePoissonSolver.set_nonlinear_tolerance",
+    "source_symbol": "NonlinearVariablePoissonSolver.get_last_residual_norm",
     "source_file": "src/kernelpack/solvers/nonlinear_variable_poisson.py"
   },
   {
-    "query": "What right-hand-side formulas are used for the first-, second-, and third-order BDF diffusion steps?",
-    "expected_answer": "bdf1_step uses previous + dt*f and lap_scale=-nu*dt. bdf2_step uses (4/3)*cnm1 - (1/3)*cnm2 + (2/3)*dt*f and lap_scale=-(2/3)*nu*dt. bdf3_step uses (18/11)*cn - (9/11)*cnm1 + (2/11)*cnm2 + (6/11)*dt*f and lap_scale=-(6/11)*nu*dt.",
+    "query": "After a forward semi-Lagrangian transport step, how can I audit how many defect-correction sweeps were needed?",
+    "expected_answer": "The PU semi-Lagrangian transport object keeps counters for moved solves requiring zero, one, or two-or-more defect corrections, plus a total `defect_correction_solves` counter. The diagnostic accessor returns a shallow dictionary copy with those four integer fields, and the counters can be reset before a benchmark run.",
     "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "DiffusionSolver.bdf3_step",
-    "source_file": "src/kernelpack/solvers/diffusion.py"
-  },
-  {
-    "query": "How does the partition-of-unity diffusion discretization build Laplacian and boundary rows compared with the standard diffusion solver?",
-    "expected_answer": "PUDiffusionSolver.init builds patch_data = pu_patch_geometry(domain, xi) and self.lap = pu_localized_operator(domain, patch_data, xi, self.x, \"lap\"). During stepping it builds self.bc with pu_localized_operator(..., self.xb, \"bc\", normals=self.nr, neu_coeff=neu_coeff, dir_coeff=dir_coeff). It does not use make_assembler/FDDiffOp for these operators.",
-    "tier": "conceptual",
-    "module": "kernelpack.solvers",
-    "source_symbol": "PUDiffusionSolver.init",
-    "source_file": "src/kernelpack/solvers/pu_diffusion.py"
-  },
-  {
-    "query": "When advancing multiple species with the same diffusivity, what shapes should forcing and boundary callbacks return?",
-    "expected_answer": "The wrapper calls forcing(nu, time, x) and slices [:, species] for each child solver. It also calls bc(neu_coeffs, dir_coeffs, nr, time, xb) and slices [:, species]. The same neu_coeff_func and dir_coeff_func are reused for all species.",
-    "tier": "api",
-    "module": "kernelpack.solvers",
-    "source_symbol": "MultiSpeciesDiffusionSolver.bdf1_step",
-    "source_file": "src/kernelpack/solvers/multispecies_diffusion.py"
-  },
-  {
-    "query": "For heterogeneous multispecies diffusion, what callback signatures should my source and boundary functions implement?",
-    "expected_answer": "For species j, forcing is called as forcing(species, nu, time, x), neu_coeff_func as neu_coeff_func(species, time, xb), dir_coeff_func as dir_coeff_func(species, time, xb), and bc as bc(species, neu_coeffs, dir_coeffs, nr, time, xb). Each result is reshaped for the scalar child solver.",
-    "tier": "api",
-    "module": "kernelpack.solvers",
-    "source_symbol": "HeterogeneousMultiSpeciesDiffusionSolver.bdf1_step",
-    "source_file": "src/kernelpack/solvers/heterogeneous_multispecies_diffusion.py"
-  },
-  {
-    "query": "Can I use periodic boundary conditions with PU semi-Lagrangian advection, or is that mode still unsupported?",
-    "expected_answer": "When asked about PUSLAdvectionSolver.set_periodic_boundary or periodic boundary mode: the setter stores mode=\"periodic\" and periodic_patches, but validate_boundary_condition_configuration raises because robust periodic PU-SL transport is not implemented, and apply_boundary_condition also raises ValueError for periodic mode.",
-    "tier": "workflow",
-    "module": "kernelpack.solvers",
-    "source_symbol": "PUSLAdvectionSolver.set_periodic_boundary",
+    "source_symbol": "PUSLAdvectionSolver.get_solve_stats",
     "source_file": "src/kernelpack/solvers/pu_sl_advection.py"
   },
   {
-    "query": "In a coupled semi-Lagrangian advection-diffusion solve, what happens during the first BDF step?",
-    "expected_answer": "bdf1_step requires state_nm2. It transports state_nm2 from t_next - dt over one step with _transport_state, seeds the diffusion solver with set_state_history(transported_nm2), optionally evaluates reaction at t_next on the transported state and combines it with forcing, then calls diffusion.bdf1_step(t_next, combined_forcing, neu_coeff_func, dir_coeff_func, bc).",
+    "query": "I already have two accepted diffusion states and want to start directly with a second-order BDF timestep. How should the history be seeded?",
+    "expected_answer": "The diffusion time-stepper accepts one, two, or three physical state vectors as history. With two states, it stores them as the older and newer history entries, clears the third slot, and marks one completed step, which is the condition required before the second-order BDF update can proceed. All provided states are validated to have the physical node count.",
     "tier": "workflow",
     "module": "kernelpack.solvers",
-    "source_symbol": "PUSLFDAdvectionDiffusionSolver.bdf1_step",
+    "source_symbol": "DiffusionSolver.set_state_history",
+    "source_file": "src/kernelpack/solvers/diffusion.py"
+  },
+  {
+    "query": "For a concentration matrix with one column per species, how are independent diffusion channels created before time stepping?",
+    "expected_answer": "The multispecies diffusion wrapper requires a two-dimensional state matrix. When the species count is first known, it creates one scalar diffusion time-stepper per column, initializes each with the shared domain, order, time step, diffusion coefficient, and backend settings, then seeds each scalar solver with the corresponding column. A later state with a different species count raises an error.",
+    "tier": "workflow",
+    "module": "kernelpack.solvers",
+    "source_symbol": "MultiSpeciesDiffusionSolver.set_initial_state",
+    "source_file": "src/kernelpack/solvers/multispecies_diffusion.py"
+  },
+  {
+    "query": "For a third-order advection-diffusion-reaction update, which transported histories and reaction extrapolation are used before the implicit diffusion part?",
+    "expected_answer": "The combined PU-SL plus finite-difference diffusion integrator transports the three stored histories over horizons of three, two, and one time steps respectively, ending at the new time level. If a reaction callback is supplied, it evaluates reaction values on those transported states and forms the explicit third-order extrapolation `3*r_n - 3*r_nm1 + r_nm2` before adding it to the forcing passed into the implicit diffusion update.",
+    "tier": "workflow",
+    "module": "kernelpack.solvers",
+    "source_symbol": "PUSLFDAdvectionDiffusionSolver.bdf3_step",
     "source_file": "src/kernelpack/solvers/pu_sl_fd_advection_diffusion.py"
   },
   {
-    "query": "How do I set up an advection-diffusion split where both advection and diffusion use partition-of-unity machinery?",
-    "expected_answer": "PUSLPUAdvectionDiffusionSolver.init(domain, xi_sl, xi_pu, dt, nu, direction=\"backward\", num_omp_threads=1) initializes the same PUSLAdvectionSolver for transport but uses PUDiffusionSolver.init(domain, xi_pu, dt, nu, num_omp_threads) for diffusion. The PU-specific diffusion accuracy argument is xi_pu.",
-    "tier": "api",
+    "query": "How are RBF-FD stencil size and polynomial degree chosen from a requested convergence order and differential operator order?",
+    "expected_answer": "The shared solver helper computes `ell = max(xi + theta - 1, 2)`, sets the polynomial count to `comb(dim + ell, dim)`, and uses a stencil size of `2*npoly + 1`. The spline degree starts from `ell`, is shifted down if even, and is then forced to be at least 5. The helper also sets tree mode to `all` and records the requested point set.",
+    "tier": "conceptual",
     "module": "kernelpack.solvers",
-    "source_symbol": "PUSLPUAdvectionDiffusionSolver.init",
-    "source_file": "src/kernelpack/solvers/pu_sl_pu_advection_diffusion.py"
+    "source_symbol": "build_stencil_properties",
+    "source_file": "src/kernelpack/solvers/_common.py"
+  },
+  {
+    "query": "What compactly supported partition-of-unity weight does the localized patch machinery use for scientific interpolation and operators?",
+    "expected_answer": "The PU patch weight is zero for normalized radius values at or above 1. For points inside a patch, it uses the Wendland-style polynomial `(1-r)^8 * (32*r^3 + 25*r^2 + 8*r + 1)`. Callers normalize the active patch weights for each query point before blending local stencil contributions.",
+    "tier": "conceptual",
+    "module": "kernelpack.solvers",
+    "source_symbol": "pu_patch_weight",
+    "source_file": "src/kernelpack/solvers/_pu.py"
+  },
+  {
+    "query": "How does the incompressible velocity-pressure backend assemble the coupled linear system, including slip-wall and pressure-gauge constraints?",
+    "expected_answer": "The backend builds a block saddle-point system with a velocity identity block, a pressure-gradient block scaled by `dt/alpha0`, and a boundary Lagrange-multiplier block in the top rows. The middle rows impose discrete divergence using the assembled divergence operators, and the bottom rows impose boundary normal velocity through the wall-normal matrix. When the pressure constant mode is considered null, it appends an extra gauge row and column of ones over pressure unknowns. Systems and ILU preconditioners are cached by `(alpha0, add_gauge)`.",
+    "tier": "conceptual",
+    "module": "kernelpack.solvers",
+    "source_symbol": "IncompressibleEulerBDFBackend._get_cached_system",
+    "source_file": "src/kernelpack/solvers/detail/incompressible_euler_bdf_backend.py"
   }
 ]
