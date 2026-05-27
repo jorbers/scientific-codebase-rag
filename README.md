@@ -57,6 +57,8 @@ scientific-codebase-rag/
 │   ├── 02_eval_baseline.ipynb
 │   └── qa_pairs/
 │       └── solvers_qa.json
+│   └── metadata/
+│       └── solvers_summaries.json
 │
 ├── codebase-rag/                    ← Project 1 (fills in as pipeline matures)
 │   └── README.md
@@ -72,7 +74,7 @@ scientific-codebase-rag/
 | # | Notebook | Investigates | Key Finding |
 |---|---|---|---|
 | 01 | [`01_naive_to_hybrid`](experiments/01_naive_to_hybrid.ipynb) | Chunking strategy, embedding model selection, hybrid retrieval construction | Fixed-line chunking and general-purpose embeddings both fail on scientific code; AST-aware chunking + UniXcoder + BM25/RRF hybrid establishes the right foundation |
-| 02 | [`02_eval_baseline`](experiments/02_eval_baseline.ipynb) | Eval harness and retrieval experiments v1→v3 against 10 solver Q&A pairs | Vocabulary gap is real but closable via LLM summary enrichment; the bottleneck is ranking — 9/10 targets land in top-10 but fall outside top-3; cross-encoder reranking is the highest-leverage next step |
+| 02 | [`02_eval_baseline`](experiments/02_eval_baseline.ipynb) | Eval harness and retrieval experiments v1→v3 against 10 solver Q&A pairs | Vocabulary gap is real but closable via LLM summary enrichment; the bottleneck is ranking — 8/10 targets land in top-10 but fall outside top-3; cross-encoder reranking is the highest-leverage next step |
 
 ---
 
@@ -91,7 +93,7 @@ scientific-codebase-rag/
 | Eval | 10 Q&A pairs (solvers module only) | Narrow scope; pairs need expansion and domain-expert validation |
 | Metadata | Minimal (file path, function name, class name) | Missing math context, cross-references, chunk type |
 
-**Key finding from current experiments:** vocabulary gap is real but not the primary bottleneck. After LLM summary enrichment, 9/10 targets appear in the top-10 retrieved neighborhood. The bottleneck is ranking, not retrieval. A cross-encoder reranker is the highest-leverage next step.
+**Key finding from current experiments:** vocabulary gap is real but not the primary bottleneck. After LLM summary enrichment, 8/10 targets appear in the top-10 retrieved neighborhood. The bottleneck is ranking, not retrieval. A cross-encoder reranker is the highest-leverage next step.
 
 ---
 
