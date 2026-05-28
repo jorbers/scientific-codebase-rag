@@ -221,3 +221,5 @@ __marimo__/
 .venv/
 *.chroma/
 .DS_Store
+experiments/chroma_export.pkl
+qdrant_storage/
