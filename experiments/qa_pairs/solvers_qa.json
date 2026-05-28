@@ -1,10 +1,10 @@
 [
   {
-    "query": "After running a pure Neumann elliptic benchmark, how can I record whether the constant-mode constraint was actually applied?",
-    "expected_answer": "The stationary Poisson path treats the problem as pure Neumann when the maximum absolute Dirichlet coefficient is at most 1e-13. In that case it augments the sparse system with an all-ones row and column, stores the boolean on the solver, and returns the same information as `used_nullspace_augmentation` plus a `lagrange_multiplier` in the result dictionary. The stored boolean can be queried afterward through the nullspace-status accessor.",
+    "query": "For a publication benchmark with mixed Dirichlet and Neumann elliptic boundary data, how can I obtain the physical field together with the assembled matrix, right-hand side pieces, and nullspace metadata needed for reproducibility?",
+    "expected_answer": "The stationary Poisson API materializes the Neumann and Dirichlet boundary coefficients, assembles the boundary operator for those coefficients, evaluates the forcing on interior-plus-boundary nodes, and evaluates the boundary right-hand side. It treats the case as pure Neumann when the maximum absolute Dirichlet coefficient is at most 1e-13, augments the sparse system with a constant-mode constraint in that case, and uses a direct sparse solve unless an initial guess triggers GMRES with fallback. The result dictionary contains `u`, `full_state`, `L`, `BC`, `system_matrix`, `rhs`, `target_rhs`, `boundary_rhs`, `used_nullspace_augmentation`, and `lagrange_multiplier`.",
     "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "PoissonSolver.last_solve_used_nullspace",
+    "source_symbol": "PoissonSolver.solve",
     "source_file": "src/kernelpack/solvers/poisson.py"
   },
   {
@@ -16,19 +16,19 @@
     "source_file": "src/kernelpack/solvers/variable_poisson.py"
   },
   {
-    "query": "How do I report the final residual norm after a nonlinear coefficient Poisson run in a peer-reviewed implementation?",
-    "expected_answer": "The nonlinear variable-coefficient solver records the residual norm at each Newton-like iteration in an internal field. On success, the returned result dictionary includes `residual_norm`, and the same final scalar is available through the residual diagnostic accessor. If convergence is not reached within the configured maximum iteration count, the solver raises a RuntimeError that includes the last residual norm.",
+    "query": "In a nonlinear variable-coefficient elliptic experiment, how do I run Newton-style iterations with coefficient and forcing derivatives and get convergence diagnostics back?",
+    "expected_answer": "The nonlinear elliptic API accepts forcing, forcing derivative, coefficient, coefficient derivative, boundary coefficient callbacks, boundary values, and an optional initial guess. It assembles boundary data, builds the initial unknown with an added Lagrange multiplier for pure Neumann cases, then iterates until the residual norm is below the nonlinear tolerance or the iteration limit is reached. Each iteration evaluates state-dependent coefficient and forcing data, assembles the residual, forms an exact Jacobian and preconditioner, computes a GMRES correction, and tries up to eight step halvings before accepting the full correction. On convergence it returns `u`, `full_state`, `coefficient`, `coefficient_u`, `L`, `Grad`, `PDE`, `BC`, `boundary_rhs`, `neu_coeff`, `dir_coeff`, `used_nullspace_augmentation`, `lagrange_multiplier`, `iterations`, and `residual_norm`; otherwise it raises a RuntimeError with the final residual norm.",
     "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "NonlinearVariablePoissonSolver.get_last_residual_norm",
+    "source_symbol": "NonlinearVariablePoissonSolver.solve",
     "source_file": "src/kernelpack/solvers/nonlinear_variable_poisson.py"
   },
   {
-    "query": "After a forward semi-Lagrangian transport step, how can I audit how many defect-correction sweeps were needed?",
-    "expected_answer": "The PU semi-Lagrangian transport object keeps counters for moved solves requiring zero, one, or two-or-more defect corrections, plus a total `defect_correction_solves` counter. The diagnostic accessor returns a shallow dictionary copy with those four integer fields, and the counters can be reset before a benchmark run.",
+    "query": "When advancing a conservative density field with forward semi-Lagrangian transport, how does the API handle boundary exits and mass preservation?",
+    "expected_answer": "The forward transport path first validates the configured advection boundary condition. Inflow-Dirichlet mode is delegated to the backward tracing path, while tangential flow is checked at both the old and new time levels. For the conservative forward path, it records the target mass per transported column, traces output nodes forward, prepares boundary data, and performs up to four defect-correction sweeps by comparing localized values at the traced points against the right-hand side. It tracks whether zero, one, or multiple corrections were needed, projects the corrected nodal samples back to coefficients, and applies a global constant shift so each column matches the pre-step target mass.",
     "tier": "api",
     "module": "kernelpack.solvers",
-    "source_symbol": "PUSLAdvectionSolver.get_solve_stats",
+    "source_symbol": "PUSLAdvectionSolver.forward_sl_step",
     "source_file": "src/kernelpack/solvers/pu_sl_advection.py"
   },
   {
