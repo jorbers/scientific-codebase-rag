@@ -54,11 +54,21 @@ scientific-codebase-rag/
 ├── experiments/                     ← shared retrieval experimentation phase
 │   ├── README.md
 │   ├── 01_naive_to_hybrid.ipynb
-│   ├── 02_eval_baseline.ipynb
-│   └── qa_pairs/
-│       └── solvers_qa.json
-│   └── metadata/
-│       └── solvers_summaries.json
+│   ├── 02a_eval_bm25_mangling.ipynb
+│   ├── 02b_eval_baseline.ipynb
+│   ├── 03_qdrant_migration.ipynb
+│   ├── qa_pairs/
+│   │   └── solvers_qa.json
+│   ├── metadata/
+│   │   └── solvers_summaries.json
+│   ├── scripts/
+│   │   └── migrate_to_qdrant.py
+│   ├── utils/
+│   │   └── chunking.py
+│   │   └── eval_utils.py
+│   └── reports/
+│       ├── 02_eval_report_v2.pdf
+│       └── 03_qdrant_migration_report.pdf
 │
 ├── codebase-rag/                    ← Project 1 (fills in as pipeline matures)
 │   └── README.md
@@ -74,26 +84,31 @@ scientific-codebase-rag/
 | # | Notebook | Investigates | Key Finding |
 |---|---|---|---|
 | 01 | [`01_naive_to_hybrid`](experiments/01_naive_to_hybrid.ipynb) | Chunking strategy, embedding model selection, hybrid retrieval construction | Fixed-line chunking and general-purpose embeddings both fail on scientific code; AST-aware chunking + UniXcoder + BM25/RRF hybrid establishes the right foundation |
-| 02 | [`02_eval_baseline`](experiments/02_eval_baseline.ipynb) | Eval harness and retrieval experiments v1→v3 against 10 solver Q&A pairs | Vocabulary gap is real but closable via LLM summary enrichment; the bottleneck is ranking — 8/10 targets land in top-10 but fall outside top-3; cross-encoder reranking is the highest-leverage next step |
+| 02a | [`02a_eval_bm25_mangling`](experiments/02a_eval_bm25_mangling.ipynb) | Research artifact — preserves broken whitespace BM25 tokenization to isolate the sparse leg's contribution by comparison with 02b | Whitespace tokenization renders BM25 functionally dead; recall@3 at v3 = 4/10 vs. 8/10 with correct tokenization — a 40-point gap from one incorrect function call |
+| 02b | [`02b_eval_baseline`](experiments/02b_eval_baseline.ipynb) | Authoritative retrieval experiments v1→v3 with identifier-aware BM25 tokenization — eval harness, failure mode diagnosis, LLM summary enrichment | Vocabulary gap is closable via LLM summary enrichment (recall@5 = 10/10 after v3); bottleneck is ranking, not coverage; cross-encoder reranker is the highest-leverage next step |
+| 03 | [`03_qdrant_migration`](experiments/03_qdrant_migration.ipynb) | ChromaDB → Qdrant migration, point-by-point verification, hybrid parity confirmation, cross-encoder reranker preview | Migration verified clean; hybrid parity confirmed (8/10, 10/10, 10/10 — matches 02b exactly); reranker adds +5 recall@3 over dense-only Qdrant |
 
 ---
 
 ## Where Things Stand
 
-*This table is versioned — updated as the research unfolds.*
+*This table is versioned — updated as the research unfolds. Last updated: 05-28-2026.*
 
 | Component | Current State | Problem |
 |---|---|---|
-| Chunking | Tree-sitter at function/class boundaries | Good, but no hierarchy — no "read big" after "retrieve small" |
-| Vector store | ChromaDB | Fine for prototyping; migrating to Qdrant |
-| Embeddings | UniXcoder (microsoft/unixcoder-base) | Code-aware but not math-aware |
-| Search | BM25 + dense, RRF fusion | Solid — keep, migrate to Qdrant native hybrid |
-| Reranking | None | Missing a critical quality layer; highest-leverage next step |
+| Chunking | Tree-sitter at function/class boundaries, MIN_LINES=5 | Good, but no hierarchy — no "read big" after "retrieve small" |
+| Vector store | **Qdrant** (migration complete, parity verified) | Manual BM25+RRF not yet replaced with Qdrant native sparse hybrid |
+| Embeddings | UniXcoder (microsoft/unixcoder-base) + LLM-generated summaries prepended | Summaries closed the vocabulary gap; embedding model itself not yet ablated |
+| Search | BM25 + dense + RRF fusion (Qdrant, mirrored from 02b) | Works; migrate to Qdrant native sparse vectors before treating as production |
+| Reranking | **Implemented** — `cross-encoder/ms-marco-MiniLM-L-6-v2` | Ranking quality for generation untested; hybrid+reranker not yet evaluated together |
 | LLM generation | None | Retrieval-only; not yet end-to-end |
-| Eval | 10 Q&A pairs (solvers module only) | Narrow scope; pairs need expansion and domain-expert validation |
+| Eval | 10 Q&A pairs (solvers module only, Codex-generated) | Narrow scope; not yet domain-expert validated — numbers are directional |
 | Metadata | Minimal (file path, function name, class name) | Missing math context, cross-references, chunk type |
 
-**Key finding from current experiments:** vocabulary gap is real but not the primary bottleneck. After LLM summary enrichment, 8/10 targets appear in the top-10 retrieved neighborhood. The bottleneck is ranking, not retrieval. A cross-encoder reranker is the highest-leverage next step.
+**Key findings from current experiments:**
+- Vocabulary gap is closable: after LLM summary enrichment, all 10 targets land in the top-50 dense neighborhood. Recall@5 = 10/10 in v3.
+- Bottleneck is ranking, not retrieval coverage. A cross-encoder reranker adds +5 recall@3 over dense-only Qdrant (3/10 → 8/10).
+- BM25 tokenization matters: whitespace-only tokenization kills the sparse leg silently. Identifier-aware tokenization is non-optional.
 
 ---
 
@@ -132,53 +147,26 @@ Scoreboard for every subsequent experiment:
 
 ---
 
-### Phase 1 — Foundation Migration
+### Phase 1 — Foundation
 
 #### 1.1 — ChromaDB to Qdrant
 
-Qdrant gives:
-- Named vector spaces (used for multi-representation indexing in Phase 2)
-- Payload filtering (filter by module, chunk type, etc. before vector search)
-- Native sparse + dense hybrid search with built-in RRF
-- Production-grade HNSW index for scale (Trilinos, PETSc later)
+**DONE.** Migration complete. Every point verified against the ChromaDB export (IDs, payload, metadata, vectors within 1e-5 tolerance). Dense ordered-ID parity confirmed at k=3, 5, 10. Hybrid parity confirmed — Qdrant hybrid matches 02b recall exactly.
 
-The manual BM25 + RRF implementation in the current pipeline works but is not persisted, not calibrated, and not tunable. Qdrant collapses three moving parts into one tool call.
-
-Migration plan: same 252 filtered chunks, same UniXcoder embeddings, same metadata. Verify hybrid search + RRF reproduces existing recall before adding anything new. This infrastructure is shared by both projects.
+**Open:** Manual BM25+RRF is still being mirrored from the notebook. Qdrant's native sparse + dense hybrid search replaces this entirely — evaluate and swap before treating the migration as production-complete.
 
 #### 1.2 — Upgrade Embeddings
 
-The current direction: use an LLM to generate embeddings rather than a dedicated embedding model — the current state of the art for code-domain retrieval.
-
-Comparison points to ablate:
+**Not started.** Comparison points to ablate:
 - `voyage-code-2` (Voyage AI) — top of MTEB code leaderboard
-- `Qwen3-Embedding-0.6B` — strong open-source alternative, competitive on code domain MTEB
-- LLM-generated embeddings — recommended direction
+- `Qwen3-Embedding-0.6B` — strong open-source alternative, good on code domain MTEB
+- LLM-generated embeddings
 
-**Why this matters for KernelPack specifically:** the codebase mixes Python code, mathematical terminology (PHS, RBF, Legendre, Laplacian, BDF3), and scientific docstrings. A general embedding collapses `"lap"` (Laplacian operator) and `"lap"` (loop iteration) into nearby vectors. A code-aware or LLM-generated embedding does not.
-
-Run the eval set after each swap. If recall@k doesn't improve, that is a result.
+Run the eval set after each swap. If recall@k doesn't improve, that's a result.
 
 #### 1.3 — Enrich Chunk Metadata
 
-Each chunk stored in Qdrant should carry:
-
-```json
-{
-  "text": "...",
-  "chunk_type": "function | class | module_docstring | inline_comment",
-  "module": "kernelpack.rbffd",
-  "parent_class": "FDDiffOp",
-  "function_name": "assemble_op",
-  "math_terms": ["laplacian", "PHS", "stencil"],
-  "cross_refs": ["RBFStencil", "StencilProperties", "DomainDescriptor"],
-  "has_numba": true,
-  "source_file": "src/kernelpack/rbffd/assembler.py",
-  "line_range": [42, 87]
-}
-```
-
-`math_terms` and `cross_refs` are the key additions. They enable payload-filtered retrieval — when a query mentions "Laplacian," filter to chunks with that math term before vector search. Codex can generate these from source at index time.
+**Not started.** Each chunk should carry `math_terms`, `cross_refs`, `chunk_type`, and `has_numba` in addition to current fields. Enables payload-filtered retrieval — when a query mentions "Laplacian," filter to chunks with that math term before vector search.
 
 ---
 
@@ -186,58 +174,32 @@ Each chunk stored in Qdrant should carry:
 
 #### 2.1 — Cross-encoder Reranking
 
-**Highest-leverage next step based on eval findings.**
+**Implemented. Numbers in hand.**
 
-Two-stage approach:
-1. Hybrid BM25 + dense retrieves top 30–50 candidates (fast, cheap)
-2. Cross-encoder scores each candidate against the query in full context (slower, accurate)
-3. Keep top 5–8 for generation
+`cross-encoder/ms-marco-MiniLM-L-6-v2` on top of Qdrant dense: recall@3 went 3/10 → 8/10 (+5).
 
-The eval baseline shows 9/10 targets already land in the top-10 window. A cross-encoder on that window would plausibly recover 7–8/10 recall@3.
-
-Starting point: `cross-encoder/ms-marco-MiniLM-L-6-v2`. Worth comparing against a code-specific cross-encoder once the baseline is established.
+**What's still open:**
+- Reranker evaluated on dense-only Qdrant; needs evaluation on top of Qdrant hybrid
+- Ranking quality for generation (chunk order matters for what the LLM sees) not yet measured
+- Code-specific cross-encoder comparison not yet run
 
 #### 2.2 — Hierarchical "Retrieve Small, Read Big"
 
-Addresses the chunking size paradox. Index KernelPack at two granularities simultaneously in Qdrant:
-
-- **Fine chunks:** 3–5 line logical units within a function. Small embedding footprint = precise retrieval.
-- **Coarse chunks:** full function or class block. Sent to the LLM for generation context.
-
-Every fine chunk carries a pointer to its parent coarse chunk. Retrieve fine (precision), expand to coarse before passing to the LLM (completeness).
-
-Natural hierarchy for KernelPack:
-- Fine: individual numerical operation or parameter block
-- Coarse: full method (e.g., full `assemble_op`)
-- Module: class docstring + `__init__` summary
+**Not started.** Index at two granularities simultaneously. Retrieve fine (precision), expand to coarse before passing to the LLM (completeness).
 
 #### 2.3 — Multi-representation Indexing
 
-Core idea: attach multiple embeddings to the same chunk so different representations of the same content are indexed separately. A natural-language comment and raw code say the same thing differently — embed them with models suited to each modality rather than forcing one embedding to cover both.
-
-Three embeddings per chunk:
-- Code only
-- Code + comments
-- Comments only
-
-All three target the vocabulary gap between how a scientist phrases a query ("conservation of mass") and how the code expresses it ("divergence free"). Ablation will isolate which representation contributes most. This benefits directly from Qdrant's named vector spaces.
+**Not started.** Attach multiple embeddings to the same chunk — code only, code + comments, comments only — using Qdrant named vector spaces. Ablation will isolate which representation contributes most.
 
 #### 2.4 — The Trimodal Problem (KernelPack-Specific Research Gap)
 
-This is where KernelPack diverges from generic code RAG — and where there is genuine research novelty.
-
-A query like *"how do I set up a 4th-order RBF-FD Laplacian?"* requires three things simultaneously:
+**Not started.** A query like *"how do I set up a 4th-order RBF-FD Laplacian?"* requires three things simultaneously:
 
 1. **Code:** `StencilProperties.from_accuracy(operator="lap", convergence_order=4, ...)`
 2. **Math:** understanding that "4th order" means the polynomial augmentation degree and PHS exponent are linked
 3. **Cross-reference:** knowing that `FDDiffOp` is the assembler that consumes those properties
 
-No current RAG system handles this as a unified retrieval problem. The approach:
-
-- At index time: run each function's docstring through an LLM to extract a "math context" summary. Store as metadata.
-- At query time: if the query contains mathematical terminology, retrieve against both code embeddings and math context embeddings, then merge via two separate Qdrant vector spaces in one collection.
-
-Start simple — metadata filtering on `math_terms` — validate with the eval set, then move to dual-embedding retrieval.
+No current RAG system handles this as a unified retrieval problem. Start with metadata filtering on `math_terms`, validate with the eval set, then move to dual-embedding retrieval.
 
 *The citizen science RAG will hit this problem harder — a non-expert's query vocabulary will diverge furthest from codebase naming conventions.*
 
@@ -261,8 +223,6 @@ Do not invent functions, classes, or arguments not present below.
 Query: {query}
 ```
 
-The key constraint: *"do not invent functions not present below."* This is the prompt-level version of constrained execution.
-
 **For the citizen science interface (Project 2):**
 
 ```
@@ -274,15 +234,13 @@ in plain English first, then provide working Python code.
 [retrieved chunks]
 ```
 
-The citizen science prompt requires more scaffolding — the user does not know what a solver or domain descriptor is. The retrieved context has to bridge that gap. This is a harder generation problem than the coding agent case.
-
 #### 3.2 — Adaptive Retrieval
 
-Not every query needs heavy retrieval. A lightweight query classifier (a single LLM call) routes:
+A lightweight query classifier (a single LLM call) routes:
 - Simple/direct → retrieve 3 chunks, single-hop
 - Complex/workflow → retrieve 15 chunks across multiple modules, potentially multi-hop
 
-The citizen science use case skews heavily toward complex/workflow queries — the classifier must handle natural-language goal descriptions, not just API questions.
+The citizen science use case skews heavily toward complex/workflow queries.
 
 ---
 
@@ -301,7 +259,7 @@ The MCP server is a thin wrapper — all real logic lives in the retrieval pipel
 
 **For the coding agent (Project 1):** Codex calls `retrieve_code` before generating any KernelPack-related code. Enforced via system prompt. Verified via call logs — Codex should not answer from training data.
 
-**For the citizen science interface (Project 2):** The user's natural language goal hits `suggest_workflow`, which returns a structured plan (geometry type, solver type, boundary condition type), which triggers `run_example` to produce starter code. This is the higher-level tool the public-facing MCP server exposes: `plan_simulation(natural_language_goal)`.
+**For the citizen science interface (Project 2):** The user's natural language goal hits `suggest_workflow`, which returns a structured plan (geometry type, solver type, boundary condition type), which triggers `run_example` to produce starter code.
 
 ---
 
@@ -311,27 +269,20 @@ This is an evaluation approach that, to my knowledge, has not been done for scie
 
 #### The Idea
 
-A separate eval agent operates inside a sandbox where its only available context is what the RAG retrieved — the retrieved chunks are its world. The agent is only allowed to call functions that actually exist in KernelPack. The solution either works within KernelPack's real API surface or it fails, and the failure type is logged.
-
-This removes the need for human evaluation of every output. The sandbox is the judge.
+A separate eval agent operates inside a sandbox where its only available context is what the RAG retrieved. The agent is only allowed to call functions that actually exist in KernelPack. The solution either works within KernelPack's real API surface or it fails, and the failure type is logged.
 
 #### Implementation
 
-1. **Sandbox:** Docker container with only `kernelpack-python` installed. No internet. No libraries except numpy/scipy (KernelPack's own dependencies).
+1. **Sandbox:** Docker container with only `kernelpack-python` installed. No internet. No libraries except numpy/scipy.
+2. **Tool interface:** Expose KernelPack's public API as explicit tool calls the eval agent can invoke.
+3. **Failure taxonomy:**
+   - `FunctionNotFound` → retrieval failure
+   - `WrongSignature` → incomplete context
+   - `WrongOutput` → reasoning failure, not retrieval failure
+   - `CorrectOutput` → pass
+4. **Attribution:** `FunctionNotFound` and `WrongSignature` failures are attributed back to which retrieval step failed.
 
-2. **Tool interface:** Expose KernelPack's public API as explicit tool calls the eval agent can invoke. The agent solves each eval task by composing real tool calls — it cannot reach outside what the RAG gave it.
-
-3. **Failure taxonomy — log every failure by type:**
-   - `FunctionNotFound` → the RAG retrieved context that implied a non-existent function. Retrieval failure.
-   - `WrongSignature` → the function exists but was called with incorrect arguments. The RAG gave incomplete context about the API.
-   - `WrongOutput` → the function ran but produced incorrect results. Reasoning failure, not retrieval failure.
-   - `CorrectOutput` → pass.
-
-4. **Attribution:** `FunctionNotFound` and `WrongSignature` failures are attributed back to which retrieval step failed to surface the right chunk. This closes the loop between eval failure and RAG improvement.
-
-**Why this is novel:** no existing eval framework for code RAG closes the loop between generation failure and retrieval failure attribution at this level of specificity. SWE-bench tells you if the patch worked. This tells you *why* the RAG failed to ground the patch correctly — without requiring human review of every output.
-
-*The constrained execution eval applies to both projects, though the citizen science case may warrant an additional failure category: "correct code, wrong abstraction level."*
+**Why this is novel:** no existing eval framework for code RAG closes the loop between generation failure and retrieval failure attribution at this level of specificity. SWE-bench tells you if the patch worked. This tells you *why* the RAG failed to ground the patch correctly.
 
 ---
 
@@ -339,9 +290,8 @@ This removes the need for human evaluation of every output. The sandbox is the j
 
 Once KernelPack-python is working end-to-end:
 
-1. **KernelPack-MATLAB:** The retrieval architecture is language-agnostic. Tree-sitter has a MATLAB grammar. Main challenge: MATLAB's documentation patterns differ; re-run the embedding evaluation.
-
-2. **Larger codebases (Trilinos, PETSc, deal.ii):** Orders of magnitude larger than KernelPack. The Meta-RAG pattern (summarize first, navigate to relevant subsystems, then retrieve) becomes necessary. The architecture built for KernelPack scales to this — summarization and navigation layers are additive.
+1. **KernelPack-MATLAB:** Tree-sitter has a MATLAB grammar. Main challenge: MATLAB's documentation patterns differ; re-run the embedding evaluation.
+2. **Larger codebases (Trilinos, PETSc, deal.ii):** The Meta-RAG pattern (summarize first, navigate to relevant subsystems, then retrieve) becomes necessary. The KernelPack architecture scales — summarization and navigation layers are additive.
 
 ---
 
@@ -349,13 +299,15 @@ Once KernelPack-python is working end-to-end:
 
 | Problem | Status | Plan |
 |---|---|---|
-| Hybrid BM25 + dense retrieval | [x] Solved | Keep — migrate to Qdrant native hybrid |
-| AST-aware chunking | [x] Solved | Extend to hierarchical (Phase 2.2) |
-| Cross-encoder reranking | Standard in research; not yet in this pipeline | Phase 2.1 — highest-leverage next step |
-| Hierarchical "retrieve small, read big" | Proposed in research, rarely in production | Phase 2.2 |
+| Hybrid BM25 + dense retrieval | **Solved, migrated to Qdrant** | Evaluate Qdrant native sparse vectors to replace notebook-local BM25 |
+| AST-aware chunking | **Solved** | Extend to hierarchical (Phase 2.2) |
+| LLM summary enrichment | **Solved** — biggest recall lever found | Expand to all 6 modules; domain-expert validation pending |
+| Cross-encoder reranking | **Implemented, numbers in hand** | Evaluate on hybrid (not dense-only); measure ranking quality for generation |
+| Hierarchical "retrieve small, read big" | Proposed in research, not in production | Phase 2.2 |
 | Code-specialized / LLM-generated embeddings | Active research area | Ablation in Phase 1.2 |
-| Multi-representation indexing | Phase 2.3 | |
+| Multi-representation indexing | Proposed, not in production | Phase 2.3 |
 | Trimodal retrieval (code + math + papers) | Open research gap | Phase 2.4 |
+| Generation grounding / trustworthy RAG | **Entirely untested** | Phase 3 |
 | Adaptive retrieval | Proposed, not in production | Phase 3.2 |
 | Constrained execution eval | Not done for scientific code RAG | Phase 5 — novel contribution |
 | Failure attribution (retrieval → generation) | Open research gap | Phase 5 failure taxonomy |
