@@ -1,0 +1,16 @@
+{
+    "section": "RBF Kernel Families — Table 1",
+    "math_terms": [
+      "matern_kernel",
+      "c4_kernel",
+      "c2_kernel",
+      "shape_parameter",
+      "rbf_interpolation",
+      "kernel_matrix",
+      "pairwise_distance",
+      "gaussian_kernel",
+      "wendland_kernel",
+      "global_interpolant"
+    ],
+    "source": "arXiv 2603.23074"
+  }
