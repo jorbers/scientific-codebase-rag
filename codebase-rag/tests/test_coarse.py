@@ -31,6 +31,7 @@ class TestCoarseChunkFields:
             line_range=(1, 2),
             source_file="mod.py",
             parent_class=None,
+            module="kernelpack.test"
         )
         assert chunk.text == "def f(x):\n    return x"
         assert chunk.qualname == "f"

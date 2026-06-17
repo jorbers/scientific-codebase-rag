@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from kernelpack_rag.chunking.coarse import CoarseChunk
+from kernelpack_rag.chunking.metadata import KP_NAMESPACE, get_coarse_uuid
 
-
-KP_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 
 
 @dataclass
@@ -42,9 +41,7 @@ def fine_chunks(coarse: CoarseChunk) -> list[FineChunk]:
         statements = [(1, len(lines))]
 
     windows = _window_ranges(statements, len(lines))
-    parent_id = uuid.uuid5(
-        KP_NAMESPACE, f"code:{coarse.source_file}:{coarse.qualname}:coarse:0"
-    )
+    parent_id = get_coarse_uuid(coarse.source_file, coarse.qualname, coarse.module)
     line_offset = coarse.line_range[0] - 1
 
     return [

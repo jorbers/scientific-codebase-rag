@@ -46,21 +46,22 @@ from pathlib import Path
 
 import pytest
 
-from kernelpack_rag.chunking.metadata import (
-    ChunkMetadata,
-    build_symbol_table,
-    extract_metadata,
-)
+from kernelpack_rag.chunking.metadata import ChunkMetadata
+from kernelpack_rag.chunking.metadata import build_symbol_table
+from kernelpack_rag.chunking.metadata import extract_metadata
 
 # ── constants ──────────────────────────────────────────────────────────────────
 
 KP_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 
-REPO_ROOT = Path(__file__).parent.parent
-SRC_ROOT = REPO_ROOT / "src" / "kernelpack"
+REPO_ROOT = Path(__file__).parent.parent          
+KP_ROOT = Path("/Users/jordanchambers/public-projects/kernelpack-python")
+SRC_ROOT = KP_ROOT / "src" / "kernelpack"
+
 def _rel(path: Path) -> str:
-    return str(path.relative_to(REPO_ROOT))
-DATA_DIR = REPO_ROOT / "data"
+    return str(path.relative_to(KP_ROOT))         
+
+DATA_DIR = REPO_ROOT / "kernelpack_rag" / "data"                    
 
 # ── local CoarseChunk proxy ────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ def _expected_uuid(source_file: str, qualname: str) -> uuid.UUID:
 
 
 def _parse(rel: str) -> ast.Module:
-    return ast.parse((REPO_ROOT / rel).read_text())
+    return ast.parse((KP_ROOT / rel).read_text())
 
 
 def _find_func(tree: ast.Module, name: str) -> ast.FunctionDef:
@@ -166,105 +167,105 @@ class TestBuildSymbolTable:
     # ── required keys: geometry/core.py ─────────────────────────────────────
 
     def test_geometry_top_level_function_phs_kernel(self, symbol_table):
-        assert "geometry.core.phs_kernel" in symbol_table
+        assert "kernelpack.geometry.core.phs_kernel" in symbol_table
 
     def test_geometry_top_level_function_distance_matrix(self, symbol_table):
-        assert "geometry.core.distance_matrix" in symbol_table
+        assert "kernelpack.geometry.core.distance_matrix" in symbol_table
 
     def test_geometry_top_level_function_normalize_rows(self, symbol_table):
-        assert "geometry.core.normalize_rows" in symbol_table
+        assert "kernelpack.geometry.core.normalize_rows" in symbol_table
 
     def test_geometry_class_rbflevelset(self, symbol_table):
-        assert "geometry.core.RBFLevelSet" in symbol_table
+        assert "kernelpack.geometry.core.RBFLevelSet" in symbol_table
 
     def test_geometry_method_rbflevelset_evaluate(self, symbol_table):
-        assert "geometry.core.RBFLevelSet.evaluate" in symbol_table
+        assert "kernelpack.geometry.core.RBFLevelSet.evaluate" in symbol_table
 
     def test_geometry_method_rbflevelset_build_level_set_from_cfi(self, symbol_table):
-        assert "geometry.core.RBFLevelSet.build_level_set_from_cfi" in symbol_table
+        assert "kernelpack.geometry.core.RBFLevelSet.build_level_set_from_cfi" in symbol_table
 
     def test_geometry_class_embeddedsurface(self, symbol_table):
-        assert "geometry.core.EmbeddedSurface" in symbol_table
+        assert "kernelpack.geometry.core.EmbeddedSurface" in symbol_table
 
     def test_geometry_method_embeddedsurface_build_level_set_from_geometric_model(self, symbol_table):
-        assert "geometry.core.EmbeddedSurface.build_level_set_from_geometric_model" in symbol_table
+        assert "kernelpack.geometry.core.EmbeddedSurface.build_level_set_from_geometric_model" in symbol_table
 
     def test_geometry_method_embeddedsurface_build_closed_geometric_model_ps(self, symbol_table):
-        assert "geometry.core.EmbeddedSurface.build_closed_geometric_model_ps" in symbol_table
+        assert "kernelpack.geometry.core.EmbeddedSurface.build_closed_geometric_model_ps" in symbol_table
 
     # ── required keys: rbffd/core.py ────────────────────────────────────────
 
     def test_rbffd_class_stencil_properties(self, symbol_table):
-        assert "rbffd.core.StencilProperties" in symbol_table
+        assert "kernelpack.rbffd.core.StencilProperties" in symbol_table
 
     def test_rbffd_class_rbfstencil(self, symbol_table):
-        assert "rbffd.core.RBFStencil" in symbol_table
+        assert "kernelpack.rbffd.core.RBFStencil" in symbol_table
 
     def test_rbffd_method_rbfstencil_lap_op(self, symbol_table):
-        assert "rbffd.core.RBFStencil.lap_op" in symbol_table
+        assert "kernelpack.rbffd.core.RBFStencil.lap_op" in symbol_table
 
     def test_rbffd_method_rbfstencil_initialize_geometry(self, symbol_table):
-        assert "rbffd.core.RBFStencil.initialize_geometry" in symbol_table
+        assert "kernelpack.rbffd.core.RBFStencil.initialize_geometry" in symbol_table
 
     def test_rbffd_method_rbfstencil_compute_weights(self, symbol_table):
-        assert "rbffd.core.RBFStencil.compute_weights" in symbol_table
+        assert "kernelpack.rbffd.core.RBFStencil.compute_weights" in symbol_table
 
     def test_rbffd_class_fddiffop(self, symbol_table):
-        assert "rbffd.core.FDDiffOp" in symbol_table
+        assert "kernelpack.rbffd.core.FDDiffOp" in symbol_table
 
     def test_rbffd_method_fddiffop_assemble_op(self, symbol_table):
-        assert "rbffd.core.FDDiffOp.assemble_op" in symbol_table
+        assert "kernelpack.rbffd.core.FDDiffOp.assemble_op" in symbol_table
 
     def test_rbffd_method_fddiffop_get_op(self, symbol_table):
-        assert "rbffd.core.FDDiffOp.get_op" in symbol_table
+        assert "kernelpack.rbffd.core.FDDiffOp.get_op" in symbol_table
 
     def test_rbffd_class_wlsstencil(self, symbol_table):
-        assert "rbffd.core.WeightedLeastSquaresStencil" in symbol_table
+        assert "kernelpack.rbffd.core.WeightedLeastSquaresStencil" in symbol_table
 
     # ── required keys: domain, nodes, poly ──────────────────────────────────
 
     def test_domain_class_domain_descriptor(self, symbol_table):
-        assert "domain.core.DomainDescriptor" in symbol_table
+        assert "kernelpack.domain.core.DomainDescriptor" in symbol_table
 
     def test_domain_method_build_structs(self, symbol_table):
-        assert "domain.core.DomainDescriptor.build_structs" in symbol_table
+        assert "kernelpack.domain.core.DomainDescriptor.build_structs" in symbol_table
 
     def test_domain_dual_class(self, symbol_table):
-        assert "domain.dual.DualNodeDomainDescriptor" in symbol_table
+        assert "kernelpack.domain.dual.DualNodeDomainDescriptor" in symbol_table
 
     def test_nodes_class_domain_node_generator(self, symbol_table):
-        assert "nodes.core.DomainNodeGenerator" in symbol_table
+        assert "kernelpack.nodes.core.DomainNodeGenerator" in symbol_table
 
     def test_poly_class_polynomial_basis(self, symbol_table):
-        assert "poly.core.PolynomialBasis" in symbol_table
+        assert "kernelpack.poly.core.PolynomialBasis" in symbol_table
 
     def test_poly_method_evaluate(self, symbol_table):
-        assert "poly.core.PolynomialBasis.evaluate" in symbol_table
+        assert "kernelpack.poly.core.PolynomialBasis.evaluate" in symbol_table
 
     def test_poly_method_from_total_degree(self, symbol_table):
-        assert "poly.core.PolynomialBasis.from_total_degree" in symbol_table
+        assert "kernelpack.poly.core.PolynomialBasis.from_total_degree" in symbol_table
 
     # ── required keys: solvers ───────────────────────────────────────────────
 
     def test_solver_poisson(self, symbol_table):
-        assert "solvers.poisson.PoissonSolver" in symbol_table
+        assert "kernelpack.solvers.poisson.PoissonSolver" in symbol_table
 
     def test_solver_diffusion(self, symbol_table):
-        assert "solvers.diffusion.DiffusionSolver" in symbol_table
+        assert "kernelpack.solvers.diffusion.DiffusionSolver" in symbol_table
 
     def test_solver_diffusion_method_bdf1_step(self, symbol_table):
-        assert "solvers.diffusion.DiffusionSolver.bdf1_step" in symbol_table
+        assert "kernelpack.solvers.diffusion.DiffusionSolver.bdf1_step" in symbol_table
 
     # ── required keys: _numba (public wrappers) ──────────────────────────────
 
     def test_numba_dense_distance_matrix(self, symbol_table):
-        assert "_numba.dense_distance_matrix" in symbol_table
+        assert "kernelpack._numba.dense_distance_matrix" in symbol_table
 
     def test_numba_phs_kernel_matrix(self, symbol_table):
-        assert "_numba.phs_kernel_matrix" in symbol_table
+        assert "kernelpack._numba.phs_kernel_matrix" in symbol_table
 
     def test_numba_build_augmented_rbf_lhs(self, symbol_table):
-        assert "_numba.build_augmented_rbf_lhs" in symbol_table
+        assert "kernelpack._numba.build_augmented_rbf_lhs" in symbol_table
 
     # ── dunder exclusion ─────────────────────────────────────────────────────
 
@@ -283,33 +284,33 @@ class TestBuildSymbolTable:
     # ── UUID formula ─────────────────────────────────────────────────────────
 
     def test_uuid_formula_phs_kernel(self, symbol_table):
-        qualname = "geometry.core.phs_kernel"
+        qualname = "kernelpack.geometry.core.phs_kernel"
         src = _rel(SRC_ROOT / "geometry" / "core.py")
         assert symbol_table[qualname] == _expected_uuid(src, qualname)
 
     def test_uuid_formula_rbfstencil_lap_op(self, symbol_table):
-        qualname = "rbffd.core.RBFStencil.lap_op"
+        qualname = "kernelpack.rbffd.core.RBFStencil.lap_op"
         src = _rel(SRC_ROOT / "rbffd" / "core.py")
         assert symbol_table[qualname] == _expected_uuid(src, qualname)
 
     def test_uuid_formula_fddiffop_assemble_op(self, symbol_table):
-        qualname = "rbffd.core.FDDiffOp.assemble_op"
+        qualname = "kernelpack.rbffd.core.FDDiffOp.assemble_op"
         src = _rel(SRC_ROOT / "rbffd" / "core.py")
         assert symbol_table[qualname] == _expected_uuid(src, qualname)
 
     def test_uuid_formula_numba_dense_distance_matrix(self, symbol_table):
-        qualname = "_numba.dense_distance_matrix"
+        qualname = "kernelpack._numba.dense_distance_matrix"
         src = _rel(SRC_ROOT / "_numba.py")
         assert symbol_table[qualname] == _expected_uuid(src, qualname)
 
     def test_uuids_distinct_for_different_names(self, symbol_table):
-        id1 = symbol_table["geometry.core.phs_kernel"]
-        id2 = symbol_table["geometry.core.distance_matrix"]
+        id1 = symbol_table["kernelpack.geometry.core.phs_kernel"]
+        id2 = symbol_table["kernelpack.geometry.core.distance_matrix"]
         assert id1 != id2
 
     def test_uuids_distinct_across_modules(self, symbol_table):
-        id1 = symbol_table["geometry.core.RBFLevelSet"]
-        id2 = symbol_table["rbffd.core.RBFStencil"]
+        id1 = symbol_table["kernelpack.geometry.core.RBFLevelSet"]
+        id2 = symbol_table["kernelpack.rbffd.core.RBFStencil"]
         assert id1 != id2
 
     def test_stable_across_calls(self):
@@ -326,7 +327,7 @@ class TestBuildSymbolTable:
 @pytest.fixture(scope="module")
 def phs_kernel_meta(symbol_table, geo_tree):
     node = _find_func(geo_tree, "phs_kernel")
-    src = _rel(SRC_ROOT / "geometry" / "core.py")
+    src = str(SRC_ROOT / "geometry" / "core.py")
     chunk = _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node)
     return extract_metadata(chunk, symbol_table)
 
@@ -380,7 +381,7 @@ class TestModuleAndName:
 
     def test_top_level_function_name(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -389,7 +390,7 @@ class TestModuleAndName:
 
     def test_module_propagated(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -397,7 +398,7 @@ class TestModuleAndName:
         assert meta.module == "geometry.core"
 
     def test_source_file_propagated(self, symbol_table, geo_tree):
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         node = _find_func(geo_tree, "phs_kernel")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
@@ -407,7 +408,7 @@ class TestModuleAndName:
 
     def test_method_function_name_leaf_only(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "evaluate")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.RBFLevelSet.evaluate", method),
             symbol_table,
@@ -416,7 +417,7 @@ class TestModuleAndName:
 
     def test_different_module_propagated(self, symbol_table, rbffd_tree):
         method = _find_method(rbffd_tree, "FDDiffOp", "assemble_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.FDDiffOp.assemble_op", method),
             symbol_table,
@@ -434,7 +435,7 @@ class TestChunkTypeAndParentClass:
 
     def test_top_level_function_chunk_type(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -443,7 +444,7 @@ class TestChunkTypeAndParentClass:
 
     def test_top_level_function_no_parent(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -452,7 +453,7 @@ class TestChunkTypeAndParentClass:
 
     def test_method_chunk_type(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "evaluate")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.RBFLevelSet.evaluate", method),
             symbol_table,
@@ -461,7 +462,7 @@ class TestChunkTypeAndParentClass:
 
     def test_method_parent_class_correct(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "evaluate")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.RBFLevelSet.evaluate", method),
             symbol_table,
@@ -470,7 +471,7 @@ class TestChunkTypeAndParentClass:
 
     def test_embedded_surface_method_parent(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "EmbeddedSurface", "build_level_set_from_geometric_model")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.EmbeddedSurface.build_level_set_from_geometric_model"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
@@ -481,7 +482,7 @@ class TestChunkTypeAndParentClass:
 
     def test_fddiffop_assemble_op_parent(self, symbol_table, rbffd_tree):
         method = _find_method(rbffd_tree, "FDDiffOp", "assemble_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.FDDiffOp.assemble_op", method),
             symbol_table,
@@ -491,7 +492,7 @@ class TestChunkTypeAndParentClass:
 
     def test_normalize_rows_no_parent(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "normalize_rows")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.normalize_rows", node),
             symbol_table,
@@ -509,7 +510,7 @@ class TestLineRange:
 
     def test_line_range_matches_ast_node(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -518,7 +519,7 @@ class TestLineRange:
 
     def test_line_range_positive(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "distance_matrix")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.distance_matrix", node),
             symbol_table,
@@ -528,7 +529,7 @@ class TestLineRange:
 
     def test_line_range_method(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
@@ -546,7 +547,7 @@ class TestHasNumba:
 
     def test_plain_function_false(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -555,7 +556,7 @@ class TestHasNumba:
 
     def test_plain_method_false(self, symbol_table, rbffd_tree):
         method = _find_method(rbffd_tree, "FDDiffOp", "assemble_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.FDDiffOp.assemble_op", method),
             symbol_table,
@@ -565,7 +566,7 @@ class TestHasNumba:
     def test_njit_decorated_function_true(self, symbol_table, numba_tree):
         # _distance_matrix_numba is decorated @njit(cache=True, fastmath=True)
         node = _find_func(numba_tree, "_distance_matrix_numba")
-        src = _rel(SRC_ROOT / "_numba.py")
+        src = str(SRC_ROOT / "_numba.py")
         meta = extract_metadata(
             _make_chunk(src, "_numba", "_numba._distance_matrix_numba", node),
             symbol_table,
@@ -575,7 +576,7 @@ class TestHasNumba:
     def test_second_njit_function_true(self, symbol_table, numba_tree):
         # _phs_kernel_numba is also @njit decorated
         node = _find_func(numba_tree, "_phs_kernel_numba")
-        src = _rel(SRC_ROOT / "_numba.py")
+        src = str(SRC_ROOT / "_numba.py")
         meta = extract_metadata(
             _make_chunk(src, "_numba", "_numba._phs_kernel_numba", node),
             symbol_table,
@@ -585,7 +586,7 @@ class TestHasNumba:
     def test_numba_wrapper_without_decorator_false(self, symbol_table, numba_tree):
         # dense_distance_matrix is a plain public wrapper — no @njit on it
         node = _find_func(numba_tree, "dense_distance_matrix")
-        src = _rel(SRC_ROOT / "_numba.py")
+        src = str(SRC_ROOT / "_numba.py")
         meta = extract_metadata(
             _make_chunk(src, "_numba", "_numba.dense_distance_matrix", node),
             symbol_table,
@@ -594,7 +595,7 @@ class TestHasNumba:
 
     def test_normalize_rows_false(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "normalize_rows")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.normalize_rows", node),
             symbol_table,
@@ -603,7 +604,7 @@ class TestHasNumba:
 
     def test_phs_lap_numba_true(self, symbol_table, numba_tree):
         node = _find_func(numba_tree, "_phs_lap_numba")
-        src = _rel(SRC_ROOT / "_numba.py")
+        src = str(SRC_ROOT / "_numba.py")
         meta = extract_metadata(
             _make_chunk(src, "_numba", "_numba._phs_lap_numba", node),
             symbol_table,
@@ -625,7 +626,7 @@ class TestMathTerms:
 
     def test_math_terms_is_list(self, symbol_table, geo_tree, lexicon):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -634,7 +635,7 @@ class TestMathTerms:
 
     def test_math_terms_subset_of_lexicon(self, symbol_table, geo_tree, lexicon):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -645,7 +646,7 @@ class TestMathTerms:
 
     def test_no_duplicate_math_terms(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "distance_matrix")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.distance_matrix", node),
             symbol_table,
@@ -655,7 +656,7 @@ class TestMathTerms:
     def test_phs_kernel_has_phs_term(self, symbol_table, geo_tree, lexicon):
         # "phs" is in lexicon AND appears as a token in the identifier "phs_kernel"
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -665,7 +666,7 @@ class TestMathTerms:
     def test_rbflevelset_build_cfi_has_rbf_term(self, symbol_table, geo_tree, lexicon):
         # build_level_set_from_cfi's docstring and identifiers contain "rbf"
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
@@ -678,7 +679,7 @@ class TestMathTerms:
         # _phs_lap_numba — the identifier "lap" tokenises; "laplacian" is in lexicon.
         # Matching strategy may map "lap" → "laplacian" OR the docstring mentions it.
         node = _find_func(numba_tree, "_phs_lap_numba")
-        src = _rel(SRC_ROOT / "_numba.py")
+        src = str(SRC_ROOT / "_numba.py")
         meta = extract_metadata(
             _make_chunk(src, "_numba", "_numba._phs_lap_numba", node),
             symbol_table,
@@ -687,7 +688,7 @@ class TestMathTerms:
 
     def test_stencil_term_in_fddiffop_assemble_op(self, symbol_table, rbffd_tree, lexicon):
         method = _find_method(rbffd_tree, "FDDiffOp", "assemble_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.FDDiffOp.assemble_op", method),
             symbol_table,
@@ -696,7 +697,7 @@ class TestMathTerms:
 
     def test_math_terms_all_lowercase(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -705,7 +706,7 @@ class TestMathTerms:
 
     def test_no_python_builtins_in_math_terms(self, symbol_table, geo_tree, lexicon):
         node = _find_func(geo_tree, "normalize_rows")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.normalize_rows", node),
             symbol_table,
@@ -715,7 +716,7 @@ class TestMathTerms:
 
     def test_method_math_terms_subset_of_lexicon(self, symbol_table, rbffd_tree, lexicon):
         method = _find_method(rbffd_tree, "RBFStencil", "lap_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.RBFStencil.lap_op", method),
             symbol_table,
@@ -733,7 +734,7 @@ class TestCrossRefs:
     def test_cross_refs_all_in_symbol_table(self, symbol_table, geo_tree):
         # phs_kernel is a 1-line wrapper; any cross_refs found must be in the table
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -743,7 +744,7 @@ class TestCrossRefs:
 
     def test_cross_ref_ids_match_symbol_table(self, symbol_table, geo_tree):
         node = _find_func(geo_tree, "phs_kernel")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.phs_kernel", node),
             symbol_table,
@@ -754,7 +755,7 @@ class TestCrossRefs:
     def test_normalize_rows_has_no_intra_package_calls(self, symbol_table, geo_tree):
         # normalize_rows calls only numpy — no intra-package cross_refs
         node = _find_func(geo_tree, "normalize_rows")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", "geometry.core.normalize_rows", node),
             symbol_table,
@@ -766,19 +767,19 @@ class TestCrossRefs:
         # build_level_set_from_cfi calls normalize_rows, distance_matrix, phs_kernel
         # — all public functions in the same module.
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
             symbol_table,
         )
-        assert "geometry.core.normalize_rows" in meta.cross_refs
-        assert "geometry.core.distance_matrix" in meta.cross_refs
-        assert "geometry.core.phs_kernel" in meta.cross_refs
+        assert "kernelpack.geometry.core.normalize_rows" in meta.cross_refs
+        assert "kernelpack.geometry.core.distance_matrix" in meta.cross_refs
+        assert "kernelpack.geometry.core.phs_kernel" in meta.cross_refs
 
     def test_build_level_set_from_cfi_cross_ref_ids_consistent(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
@@ -790,19 +791,19 @@ class TestCrossRefs:
     def test_build_level_set_from_geometric_model_refs_rbflevelset(self, symbol_table, geo_tree):
         # build_level_set_from_geometric_model constructs RBFLevelSet() directly
         method = _find_method(geo_tree, "EmbeddedSurface", "build_level_set_from_geometric_model")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.EmbeddedSurface.build_level_set_from_geometric_model"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
             symbol_table,
         )
-        assert "geometry.core.RBFLevelSet" in meta.cross_refs
+        assert "kernelpack.geometry.core.RBFLevelSet" in meta.cross_refs
 
     def test_cross_refs_no_external_packages(self, symbol_table, rbffd_tree):
         # assemble_op references private helpers in the same module;
         # numpy / scipy names must not appear in cross_refs.
         method = _find_method(rbffd_tree, "FDDiffOp", "assemble_op")
-        src = _rel(SRC_ROOT / "rbffd" / "core.py")
+        src = str(SRC_ROOT / "rbffd" / "core.py")
         meta = extract_metadata(
             _make_chunk(src, "rbffd.core", "rbffd.core.FDDiffOp.assemble_op", method),
             symbol_table,
@@ -813,7 +814,7 @@ class TestCrossRefs:
 
     def test_cross_refs_no_stdlib_names(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),
@@ -826,7 +827,7 @@ class TestCrossRefs:
 
     def test_cross_refs_unique(self, symbol_table, geo_tree):
         method = _find_method(geo_tree, "RBFLevelSet", "build_level_set_from_cfi")
-        src = _rel(SRC_ROOT / "geometry" / "core.py")
+        src = str(SRC_ROOT / "geometry" / "core.py")
         qualname = "geometry.core.RBFLevelSet.build_level_set_from_cfi"
         meta = extract_metadata(
             _make_chunk(src, "geometry.core", qualname, method),

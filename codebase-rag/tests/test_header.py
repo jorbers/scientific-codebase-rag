@@ -52,6 +52,7 @@ def make_chunk(
         line_range=line_range,
         source_file=source_file,
         parent_class=parent_class,
+        module="kernelpack.test"
     )
 
 

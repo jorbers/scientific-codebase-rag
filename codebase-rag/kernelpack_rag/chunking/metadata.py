@@ -45,7 +45,7 @@ def build_symbol_table(package_root: Path) -> dict[str, uuid.UUID]:
         if py_file.name == "__init__.py":
             continue
 
-        rel_parts = list(py_file.relative_to(package_root).parts)
+        rel_parts = list(py_file.relative_to(package_root.parent).parts)
         rel_parts[-1] = rel_parts[-1][:-3]          # strip .py
         module = ".".join(rel_parts)
         source_file = str(py_file.relative_to(repo_root))
@@ -76,7 +76,7 @@ def build_symbol_table(package_root: Path) -> dict[str, uuid.UUID]:
                                 KP_NAMESPACE, f"code:{source_file}:{qn}:coarse:0"
                             )
 
-    out_path = package_root.parent.parent / "data" / "symbol_table.json"
+    out_path = Path(__file__).parent.parent / "data" / "symbol_table.json"
     out_path.write_text(
         json.dumps({k: str(v) for k, v in table.items()}, indent=2)
     )
@@ -92,7 +92,7 @@ def extract_metadata(chunk, symbol_table: dict) -> ChunkMetadata:
     """
     module = chunk.module
     qualname = chunk.qualname
-    suffix = qualname[len(module) + 1:]
+    suffix = qualname[len(module) + 1:] if qualname.startswith(module + ".") else qualname
     parts = suffix.split(".")
 
     if len(parts) == 1:
@@ -105,8 +105,7 @@ def extract_metadata(chunk, symbol_table: dict) -> ChunkMetadata:
         chunk_type = "method"
 
     # Read source file and get chunk text from line_range.
-    repo_root = Path(__file__).parent.parent
-    src_text = (repo_root / chunk.source_file).read_text()
+    src_text = Path(chunk.source_file).read_text()
     lo, hi = chunk.line_range
     chunk_text = "\n".join(src_text.splitlines()[lo - 1 : hi])
 
@@ -144,7 +143,7 @@ def _is_dunder(name: str) -> bool:
 def _find_node(tree: ast.Module, parts: list[str]):
     """Return the AST node matching the suffix parts (after the module)."""
     if len(parts) == 1:
-        for node in ast.iter_child_nodes(tree):
+        for node in ast.walk(tree):
             if isinstance(
                 node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
             ) and node.name == parts[0]:
@@ -224,3 +223,26 @@ def _extract_cross_refs(
     refs = sorted(found)
     ids = [symbol_table[r] for r in refs]
     return refs, ids
+
+
+def get_relative_source_file(source_file: str) -> str:
+    path = Path(source_file)
+    for p in [path] + list(path.parents):
+        if p.name == "src":
+            return str(path.relative_to(p.parent))
+    return str(path)
+
+
+def get_coarse_uuid(source_file: str, qualname: str, module: str) -> uuid.UUID:
+    rel_path = get_relative_source_file(source_file)
+    suffix = qualname[len(module) + 1:] if qualname.startswith(module + ".") else qualname
+    qn = f"{module}.{suffix}"
+    return uuid.uuid5(KP_NAMESPACE, f"code:{rel_path}:{qn}:coarse:0")
+
+
+def get_fine_uuid(source_file: str, qualname: str, module: str, window_idx: int) -> uuid.UUID:
+    rel_path = get_relative_source_file(source_file)
+    suffix = qualname[len(module) + 1:] if qualname.startswith(module + ".") else qualname
+    qn = f"{module}.{suffix}"
+    return uuid.uuid5(KP_NAMESPACE, f"code:{rel_path}:{qn}:fine:{window_idx}")
+

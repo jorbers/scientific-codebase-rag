@@ -109,6 +109,7 @@ def make_coarse(
         line_range=line_range,
         source_file=source_file,
         parent_class=parent_class,
+        module="kernelpack.test",
     )
 
 
@@ -193,7 +194,7 @@ class TestParentId:
 
     def test_parent_id_matches_d5_formula(self):
         coarse = make_coarse(FUNC_5, qualname="Solver.solve", source_file="solver.py")
-        expected = uuid.uuid5(KP_NAMESPACE, "code:solver.py:Solver.solve:coarse:0")
+        expected = uuid.uuid5(KP_NAMESPACE, "code:solver.py:kernelpack.test.Solver.solve:coarse:0")
         for fc in fine_chunks(coarse):
             assert fc.parent_id == expected
 

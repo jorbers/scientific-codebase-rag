@@ -18,6 +18,7 @@ def make_chunk(text="def foo():\n    return 1\n", qualname="foo"):
         line_range=(1, 2),
         source_file="src/kernelpack/test.py",
         parent_class=None,
+        module="kernelpack.test",
     )
 
 

@@ -19,7 +19,12 @@ class CoarseChunk:
     line_range: tuple[int, int]
     source_file: str
     parent_class: str | None
+    module: str
 
+def _source_file_to_module(path: Path) -> str:
+    parts = path.with_suffix("").parts
+    idx = next((i for i, p in enumerate(parts) if p == "kernelpack"), None)
+    return ".".join(parts[idx:]) if idx is not None else path.stem
 
 def chunk_file(path: Path) -> list[CoarseChunk]:
     source = path.read_text()
@@ -65,7 +70,7 @@ def _chunk_file_with_tree_sitter(
                 path=path,
                 source=source,
                 node=docstring,
-                qualname=path.stem,
+                qualname=_source_file_to_module(path),
                 chunk_type="module_docstring",
                 parent_class=None,
             )
@@ -79,7 +84,7 @@ def _chunk_file_with_tree_sitter(
                         path=path,
                         source=source,
                         node=outer_node,
-                        qualname=_node_name(definition_node),
+                        qualname=f"{_node_name(definition_node)}",
                         chunk_type="function",
                         parent_class=None,
                     )
@@ -122,11 +127,12 @@ def _class_chunks(
 
     class_chunk = CoarseChunk(
         text=_slice_without_ranges(source, outer_node, long_method_ranges),
-        qualname=class_name,
+        qualname=f"{class_name}",
         chunk_type="class_header",
         line_range=(outer_node.start_point[0] + 1, outer_node.end_point[0] + 1),
         source_file=str(path),
         parent_class=None,
+        module=_source_file_to_module(path),
     )
     return [class_chunk, *method_chunks]
 
@@ -185,6 +191,7 @@ def _make_chunk(
         line_range=(node.start_point[0] + 1, node.end_point[0] + 1),
         source_file=str(path),
         parent_class=parent_class,
+        module=_source_file_to_module(path),
     )
 
 
