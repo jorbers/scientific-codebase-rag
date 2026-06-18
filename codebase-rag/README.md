@@ -48,6 +48,38 @@ Cross-collection queries run as sequential legs in Python. Qdrant has no native 
 
 ---
 
+## Pipeline Architecture
+
+The pipeline has two entry points, both reached through `python -m kernelpack_rag <subcommand>`. **Ingestion** (`ingest.py`) walks the `kernelpack` source tree once per run: it parses each `.py` file into coarse chunks (functions, methods, class headers, module docstrings) and statement-aligned fine chunks via tree-sitter, builds a context header per chunk, generates a cached LLM summary, extracts metadata (`math_terms`, `cross_refs`, `has_numba`) against a package-wide symbol table, turns each chunk into one or more text representations, embeds those into the requested named vector spaces (plus an identifier-aware sparse BM25 vector), and upserts the points into Qdrant under deterministic uuid5 IDs so re-runs overwrite in place. Optionally it ingests a paper corpus into `kernelpack_papers` and copies each linked paper vector into a code point's `math__qwen3` space. **Retrieval** (`retrieve.py`) exposes plain callables — `hybrid`, `hybrid_filtered`, `trimodal`, `two_leg`, `expand_cross_refs`, `fine_to_coarse` — that issue Qdrant Query-API requests (dense + sparse prefetch fused with RRF), optionally rerank the candidates, and return a uniform `Candidate` list. `verify.py` gates the index by checking collection invariants and golden-set recall; `qlog.py` is the append-only event log the generation layer is intended to write through.
+
+One row per source file in `kernelpack_rag/`:
+
+| File | What it does | What calls it |
+|---|---|---|
+| `__main__.py` | CLI entry point; routes `python -m kernelpack_rag <subcommand>` to the matching module. | User / shell |
+| `config.py` | Holds `COLLECTIONS_CONFIG`, the write-once dict of named dense/sparse spaces and dims for both collections. | `schema.py`, `ingest.py`, `verify.py` |
+| `schema.py` | `ensure_collections()` — idempotent collection creation, schema validation against `config.py` (hard-fails on drift), int8 quantization on 1024-dim spaces, and payload-index creation. | `ingest.py`, `verify.py` |
+| `tokenizer.py` | Pure identifier-aware tokenization: emits intact dotted tokens plus snake/camel fragments, and hashes them to u32 sparse indices. | `embed/sparse.py`, `chunking/metadata.py` |
+| `ingest.py` | Orchestrator: chunk → header → fine → metadata → summarize → represent → embed → batched upsert; also paper ingestion, `math__qwen3` population, `--prune`, and the invariant report. Hosts shared Qdrant helpers and collection-name constants. | `__main__.py` (`ingest`); helpers imported by `retrieve.py`, `verify.py` |
+| `retrieve.py` | Query plans returning `Candidate` lists: `hybrid`, `hybrid_filtered`, `trimodal`, `two_leg`, `expand_cross_refs`, `fine_to_coarse`. No CLI or global state — meant to be wrapped by the MCP server. | `verify.py`; `rerank.py` (`Candidate`); MCP server / notebooks |
+| `rerank.py` | Reranker protocol: `NoopReranker` (default) and `CrossEncoderReranker` (cross-encoder, lexical fallback). | `retrieve.py`, `verify.py` |
+| `qlog.py` | Append-only JSONL event writer (`write_event`) and per-`query_id` `fold` reader for retrieval/generation/execution events. | Generation/logging layer, notebooks |
+| `verify.py` | Verification gate: collection invariants (schema, missing primaries, resolvable `parent_id`/`math_source_id`) plus golden-set recall@3/5/10 against the parity baseline. | `__main__.py` (`verify`) |
+| `chunking/coarse.py` | Tree-sitter coarse chunker → `CoarseChunk` (function/method/class-header/module-docstring), with `MIN_LINES=5` merge behavior. | `ingest.py`, `chunking/fine.py`, `chunking/header.py` |
+| `chunking/fine.py` | Splits a coarse function/method into 3–5 line statement-aligned `FineChunk` windows, each carrying its coarse `parent_id`. | `ingest.py` |
+| `chunking/header.py` | `build_header()` — context header of parent class, referenced imports, and neighbor signatures, rendered as `#` comment lines. | `ingest.py` |
+| `chunking/metadata.py` | Two-pass metadata: builds and serializes the qualname→uuid symbol table, then extracts `math_terms`/`cross_refs`/`has_numba` per chunk; owns the deterministic uuid5 helpers. | `ingest.py`, `chunking/fine.py` |
+| `chunking/papers.py` | `load_paper_chunks()` — loads `.md` paper chunks plus sidecar `.json` metadata (`math_terms`, `equation_labels`, `section`) into `PaperChunk`s. | `ingest.py` |
+| `embed/base.py` | `Embedder` protocol (`name`, `dim`, `embed_batch`, `embed_query_batch`) and `EmbedderRegistry`. | `ingest.py`, embedder implementations |
+| `embed/representations.py` | `build_representation()` — builds `ctx`/`code`/`codecom`/`com` text variants from payload; returns `None` to skip a space (e.g. empty `com`). | `ingest.py` |
+| `embed/sparse.py` | `build_sparse_vector` / `to_qdrant_sparse` — turn text into a Qdrant `SparseVector` of raw term frequencies (IDF applied server-side). | `ingest.py`, `retrieve.py` |
+| `embed/jinacode.py` | `JinaCodeEmbedder` — primary code model (jina-code-0.5b, dim 896), instruction-prefixed query/passage encoding. | `ingest.py`, `verify.py` |
+| `embed/qwen.py` | `QwenEmbedder` — Qwen3-Embedding-0.6B (dim 1024) for papers, summary, math, and NL-leaning queries. | `ingest.py` |
+| `embed/unixcoder.py` | `UniXcoderEmbedder` — UniXcoder (dim 768), retained for the ablation matrix. | `ingest.py` |
+| `enrich/summarize.py` | `summarize_chunk()` — per-coarse-chunk LLM summary cached on disk by content hash. | `ingest.py` |
+
+---
+
 ## MCP Interface
 
 The retrieval pipeline is exposed as MCP tools so coding agents can query it before generating library code:
