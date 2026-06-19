@@ -11,12 +11,8 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 
 from kernelpack_rag.embed.jinacode import JinaCodeEmbedder
-from kernelpack_rag.ingest import (
-    CODE_COLLECTION,
-    PAPERS_COLLECTION,
-    _field_equals_filter,
-    _scroll_points,
-)
+from kernelpack_rag.config import CODE_COLLECTION, PAPERS_COLLECTION
+from kernelpack_rag.qdrant_utils import _field_equals_filter, _scroll_points
 from kernelpack_rag.rerank import NoopReranker
 from kernelpack_rag.retrieve import hybrid
 from kernelpack_rag.schema import ensure_collections

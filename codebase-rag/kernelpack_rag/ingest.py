@@ -21,16 +21,15 @@ from kernelpack_rag.chunking.metadata import (
     get_fine_uuid,
 )
 from kernelpack_rag.chunking.papers import PaperChunk, load_paper_chunks
-from kernelpack_rag.config import COLLECTIONS_CONFIG
+from kernelpack_rag.config import CODE_COLLECTION, COLLECTIONS_CONFIG, make_client, PAPERS_COLLECTION
 from kernelpack_rag.embed.base import EmbedderRegistry
 from kernelpack_rag.embed.representations import RepresentationKey, build_representation
 from kernelpack_rag.embed.sparse import to_qdrant_sparse
 from kernelpack_rag.enrich.summarize import content_hash, summarize_chunk
 from kernelpack_rag.schema import ensure_collections
+from kernelpack_rag.qdrant_utils import _field_any_filter, _field_equals_filter, _scroll_points
 
 
-CODE_COLLECTION = "kernelpack_code"
-PAPERS_COLLECTION = "kernelpack_papers"
 BATCH_SIZE = 64
 SUMMARY_CACHE_DIR = Path(__file__).parent.parent / "summaries_cache"
 DEFAULT_CODE_SPACES = ("ctx__jinacode", "bm25_code", "math__qwen3")
@@ -107,7 +106,7 @@ def main(argv: list[str] | None = None) -> None:
     spaces = _requested_spaces(args.spaces, papers_dir is not None)
     _validate_spaces(spaces)
 
-    qdrant = QdrantClient(host="localhost", port=6333)
+    qdrant = make_client()
     ensure_collections(qdrant)
     openai_client = OpenAI()
     registry = _build_embedder_registry(spaces)
@@ -598,63 +597,6 @@ def _print_invariant_report(
     print(
         "Summary cache hit rate: "
         f"{stats.summary_cache_hits}/{stats.coarse_chunks} ({summary_rate:.2%})"
-    )
-
-
-def _scroll_points(
-    client: QdrantClient,
-    collection_name: str,
-    *,
-    scroll_filter: models.Filter | None = None,
-    with_payload: bool = True,
-    with_vectors: bool | list[str] = False,
-    limit: int | None = None,
-):
-    offset = None
-    remaining = limit
-
-    while True:
-        page_limit = min(256, remaining) if limit is not None else 256
-        points, next_offset = client.scroll(
-            collection_name=collection_name,
-            scroll_filter=scroll_filter,
-            limit=page_limit,
-            offset=offset,
-            with_payload=with_payload,
-            with_vectors=with_vectors,
-        )
-        for point in points:
-            yield point
-
-        if next_offset is None:
-            break
-        if limit is not None:
-            remaining -= len(points)
-            if remaining <= 0:
-                break
-        offset = next_offset
-
-
-def _field_equals_filter(field_name: str, value: str) -> models.Filter:
-    return models.Filter(
-        must=[
-            models.FieldCondition(
-                key=field_name,
-                match=models.MatchValue(value=value),
-            )
-        ]
-    )
-
-
-def _field_any_filter(field_name: str, values: list[str]) -> models.Filter:
-    return models.Filter(
-        should=[
-            models.FieldCondition(
-                key=field_name,
-                match=models.MatchValue(value=value),
-            )
-            for value in values
-        ]
     )
 
 

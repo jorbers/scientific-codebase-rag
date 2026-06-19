@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+import os
+
+from qdrant_client import QdrantClient
+
+
+CODE_COLLECTION = "kernelpack_code"
+PAPERS_COLLECTION = "kernelpack_papers"
+
 
 COLLECTIONS_CONFIG = {
     "kernelpack_code": {
@@ -36,4 +44,10 @@ COLLECTIONS_CONFIG = {
 }
 
 
-__all__ = ["COLLECTIONS_CONFIG"]
+def make_client() -> QdrantClient:
+    host = os.environ.get("QDRANT_HOST", "localhost")
+    port = int(os.environ.get("QDRANT_PORT", "6333"))
+    return QdrantClient(host=host, port=port)
+
+
+__all__ = ["CODE_COLLECTION", "COLLECTIONS_CONFIG", "make_client", "PAPERS_COLLECTION"]
