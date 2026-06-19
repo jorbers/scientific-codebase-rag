@@ -17,14 +17,6 @@ sparse+dense hybrid search. Two public functions:
         required for PointStruct upserts and sparse query prefetches.
         No new logic — same TF data, different shape.
 
-PROVENANCE
-----------
-build_sparse_vector was implemented in tokenizer.py as a temporary home
-(see that module's NOTE). This is the canonical location per the Step 11
-spec. The tokenizer.py copy remains for now but this version is authoritative.
-tests/test_sparse.py asserts identical output from both so they cannot silently
-diverge while the tokenizer.py copy still exists.
-
 MODULE BOUNDARIES
 -----------------
 Imports tokenizer primitives (bm25_tokenize, stable_u32_hash) and one

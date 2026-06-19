@@ -115,26 +115,6 @@ class TestBuildSparseVector:
         text = "RBFStencil.assemble_op compute_laplacian phs"
         assert build_sparse_vector(text) == build_sparse_vector(text)
 
-    # --- Backward compatibility ---
-
-    def test_matches_tokenizer_build_sparse_vector(self):
-        """embed/sparse.py's version must produce identical output to
-        the temporary implementation in tokenizer.py.
-        If this fails, something diverged during the move."""
-        from tokenizer import build_sparse_vector as _tok_bsv
-
-        texts = [
-            "VariablePoissonSolver.solve",
-            "RBFStencil.assemble_op",
-            "compute_stencil_laplacian phs_exponent",
-            "alpha alpha alpha",
-            "",
-        ]
-        for text in texts:
-            assert build_sparse_vector(text) == _tok_bsv(text), (
-                f"Mismatch for input: {text!r}"
-            )
-
 
 # ---------------------------------------------------------------------------
 # to_qdrant_sparse

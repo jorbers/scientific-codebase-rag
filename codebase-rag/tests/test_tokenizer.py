@@ -13,7 +13,6 @@ import pytest
 
 from kernelpack_rag.tokenizer import (
     bm25_tokenize,
-    build_sparse_vector,
     lexical_split,
     split_dots,
     split_snake_camel,
@@ -326,42 +325,6 @@ class TestStableU32Hash:
         assert stable_u32_hash("solve") != stable_u32_hash("solver")
         assert stable_u32_hash("poisson") != stable_u32_hash("poissonsolver")
 
-
-# ---------------------------------------------------------------------------
-# build_sparse_vector
-# ---------------------------------------------------------------------------
-
-class TestBuildSparseVector:
-    """build_sparse_vector: {hash → raw TF (float)}.
-
-    NOTE: this function is here temporarily. It moves to embed/sparse.py at
-    Step 11. When it moves, move these tests to tests/test_sparse.py.
-    """
-
-    def test_basic_tf(self):
-        vec = build_sparse_vector("alpha alpha beta")
-        assert vec[stable_u32_hash("alpha")] == 2.0
-        assert vec[stable_u32_hash("beta")] == 1.0
-
-    def test_values_are_float(self):
-        vec = build_sparse_vector("alpha")
-        for v in vec.values():
-            assert isinstance(v, float)
-
-    def test_empty_string_returns_empty_dict(self):
-        assert build_sparse_vector("") == {}
-
-    def test_dotted_identifier_tf_per_token(self):
-        # Each distinct emitted token appears once from a single source token
-        vec = build_sparse_vector("PoissonSolver.solve")
-        assert vec[stable_u32_hash("poissonsolver.solve")] == 1.0
-        assert vec[stable_u32_hash("poisson")] == 1.0
-        assert vec[stable_u32_hash("solver")] == 1.0
-        assert vec[stable_u32_hash("solve")] == 1.0
-
-    def test_tf_accumulates_across_repeated_source_tokens(self):
-        vec = build_sparse_vector("solve solve solve")
-        assert vec[stable_u32_hash("solve")] == 3.0
 
 
 # ---------------------------------------------------------------------------

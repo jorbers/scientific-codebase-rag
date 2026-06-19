@@ -34,24 +34,14 @@ Example:
     tokenize("alpha alpha")         # "alpha" from two source tokens
     → Counter({"alpha": 2})         # TF=2, not 4 or 6
 
-SPARSE VECTOR FORMAT
---------------------
-build_sparse_vector returns {stable_u32_hash(token): raw_term_frequency}.
-IDF is NOT applied here — Qdrant applies it server-side via modifier: idf
-on the bm25_code sparse space. Never compute IDF client-side.
-
-NOTE: build_sparse_vector is here temporarily. It moves to embed/sparse.py
-at Step 11 of the foundation plan.
-
 MODULE BOUNDARIES
 -----------------
 This module is pure functions with no external dependencies. Do not import
 Qdrant, model libraries, or anything project-specific here. Two downstream
 consumers:
 
-    embed/sparse.py (Step 11)       — builds Qdrant sparse vectors from this output
-    chunking/metadata.py (Step 7)   — matches tokenizer fragments against the
-                                      domain math-terms lexicon (rbf, laplacian, etc.)
+    embed/sparse.py    — builds Qdrant sparse vectors from this output
+    chunking/metadata.py — matches tokenizer fragments against the math-terms lexicon
 
 TESTS
 -----
@@ -64,7 +54,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections import Counter
 
 
 _LEXICAL_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*")
@@ -126,7 +115,3 @@ def stable_u32_hash(token: str) -> int:
     return int.from_bytes(digest, "little", signed=False)
 
 
-def build_sparse_vector(text: str) -> dict[int, float]:
-    """Return {stable_u32_hash(token): raw_term_frequency} for sparse search."""
-    counts = Counter(bm25_tokenize(text))
-    return {stable_u32_hash(token): float(count) for token, count in counts.items()}
