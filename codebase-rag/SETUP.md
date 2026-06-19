@@ -21,7 +21,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 pip install qdrant-client openai mcp torch transformers sentence-transformers \
-    tree-sitter tree-sitter-python numpy python-dotenv pytest
+    tree-sitter tree-sitter-python numpy pytest
 pip install -e .
 ```
 
@@ -41,7 +41,7 @@ QDRANT_HOST=localhost          # default
 QDRANT_PORT=6333               # default
 ```
 
-The ingestion script and integration tests read these from the environment (or from `.env` via `python-dotenv` if you load it explicitly). The simplest approach is to export them in your shell before running commands:
+The code reads directly from the environment via `os.environ`. Export your `.env` before running commands:
 
 ```bash
 export $(grep -v '^#' .env | xargs)
