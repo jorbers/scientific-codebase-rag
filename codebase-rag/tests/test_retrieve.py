@@ -467,8 +467,8 @@ class TestExpandCrossRefs:
             # Expansion hits must be marked — exact field name is Codex's choice,
             # but the marker must exist so qlog can distinguish them.
             marked = (
-                c.leg_scores.get("expansion") is True
-                or c.leg_scores.get("provenance") == "cross_ref"
+                c.meta.get("expansion") is True
+                or c.meta.get("provenance") == "cross_ref"
             )
             assert marked, (
                 f"Expansion hit {c.payload.get('function_name')!r} has no provenance marker. "
