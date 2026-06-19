@@ -223,3 +223,8 @@ __marimo__/
 .DS_Store
 experiments/chroma_export.pkl
 qdrant_storage/
+
+logs/
+**/.DS_Store
+eval/ragsystem/.venv/
+eval/ragsystem/.venv311/
