@@ -4,7 +4,7 @@ import sys
 
 
 def main() -> None:
-    subcommands = ("ingest", "reembed", "verify", "query")
+    subcommands = ("ingest", "reembed", "verify", "query", "mcp")
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
         print(f"Usage: python -m kernelpack_rag [{' | '.join(subcommands)}] [args]")
@@ -20,6 +20,8 @@ def main() -> None:
         from kernelpack_rag.verify import main as _main
     elif subcmd == "query":
         from kernelpack_rag.query import main as _main
+    elif subcmd == "mcp":
+        from kernelpack_rag.mcp_server import main as _main
 
     _main()
 
