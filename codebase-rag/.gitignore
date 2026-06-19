@@ -1,3 +1,11 @@
 summaries_cache/
 kernelpack_rag/data/symbol_table.json
 .env
+.env.local
+.claude/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+.DS_Store

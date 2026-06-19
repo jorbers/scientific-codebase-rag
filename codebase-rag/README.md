@@ -64,10 +64,9 @@ Cross-collection queries run as sequential legs in Python. Qdrant has no native 
 The retrieval pipeline is exposed as MCP tools so coding agents can query it before generating library code:
 
 ```
-retrieve_code(query: str, module_filter?: str) -> list[CodeChunk]
-explain_api(symbol_name: str) -> str
-suggest_workflow(goal: str) -> WorkflowPlan
-run_example(workflow_plan: WorkflowPlan) -> CodeSnippet
+retrieve_code(query: str, module_filter?: str, k?: int) -> list[CodeChunk]
 ```
 
-All logic lives in the retrieval pipeline. The MCP layer handles protocol and routing only.
+`retrieve_code` is the only implemented tool. `explain_api`, `suggest_workflow`, and `run_example` are registered stubs that return an error response — they are Phase 3 scope.
+
+See [SETUP.md](SETUP.md) for how to start the server and register it with an MCP client.

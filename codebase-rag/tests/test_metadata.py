@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,9 +55,18 @@ from kernelpack_rag.chunking.metadata import extract_metadata
 
 KP_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 
-REPO_ROOT = Path(__file__).parent.parent          
-KP_ROOT = Path("/Users/jordanchambers/public-projects/kernelpack-python")
-SRC_ROOT = KP_ROOT / "src" / "kernelpack"
+REPO_ROOT = Path(__file__).parent.parent
+
+_kp_src = os.environ.get("KP_SRC")
+if not _kp_src:
+    pytest.skip(
+        "KP_SRC not set — set it to <kernelpack-python>/src/kernelpack",
+        allow_module_level=True,
+    )
+
+SRC_ROOT = Path(_kp_src)
+KP_ROOT = SRC_ROOT.parent.parent  # kernelpack-python repo root
+
 
 def _rel(path: Path) -> str:
     return str(path.relative_to(KP_ROOT))         

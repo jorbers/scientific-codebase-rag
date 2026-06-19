@@ -13,9 +13,14 @@ def main() -> int:
         print("Error: OPENAI_API_KEY is not set.")
         return 1
 
+    kp_src = os.environ.get("KP_SRC")
+    if not kp_src:
+        print("Error: KP_SRC is not set — set it to <kernelpack-python>/src/kernelpack")
+        return 1
+
     client = openai.OpenAI()
     repo_root = Path(__file__).resolve().parent.parent
-    paths = sorted(Path("/Users/jordanchambers/public-projects/kernelpack-python/src/kernelpack").rglob("*.py"))
+    paths = sorted(Path(kp_src).rglob("*.py"))
 
     chunks: list[CoarseChunk] = []
     for path in paths:
