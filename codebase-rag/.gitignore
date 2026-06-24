@@ -17,3 +17,5 @@ summaries_cache/
 kernelpack_rag.egg-info/
 planning-docs/
 notebooks/
+mcp-rag-eval/
+experiments/baselines/
