@@ -9,3 +9,11 @@ __pycache__/
 *.egg-info/
 dist/
 .DS_Store
+eval/results/
+results.json
+data/
+logs/
+summaries_cache/
+kernelpack_rag.egg-info/
+planning-docs/
+notebooks/
