@@ -343,7 +343,12 @@ def _retrieve_existing_ids(
 
 
 def _function_name(payload: dict) -> str:
-    return str(payload.get("function_name") or "<unknown>")
+    name = payload.get("function_name")
+    if name:
+        return str(name)
+    source = payload.get("source_file", "")
+    chunk_type = payload.get("chunk_type", "")
+    return f"{source}:{chunk_type}" if source or chunk_type else "<unknown>"
 
 
 def _rate(numerator: int, denominator: int) -> float:

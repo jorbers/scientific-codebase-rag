@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import time
 import uuid
 from pathlib import Path
 from typing import Iterable
+
+from tqdm import tqdm
 
 from openai import OpenAI
 from qdrant_client import QdrantClient, models
@@ -33,6 +36,7 @@ from kernelpack_rag.qdrant_utils import _field_any_filter, _field_equals_filter,
 BATCH_SIZE = 64
 SUMMARY_CACHE_DIR = Path(__file__).parent.parent / "summaries_cache"
 DEFAULT_CODE_SPACES = ("ctx__jinacode", "bm25_code", "math__qwen3")
+_FINE_ONLY_SPACES = {"ctx__jinacode", "bm25_code"}
 DEFAULT_PAPER_SPACES = ("paper__qwen3", "bm25_paper")
 
 
@@ -109,12 +113,29 @@ def main(argv: list[str] | None = None) -> None:
     qdrant = make_client()
     ensure_collections(qdrant)
     openai_client = OpenAI()
-    registry = _build_embedder_registry(spaces)
+    registry = _build_embedder_registry(spaces, papers_dir is not None)
 
     symbol_table = build_symbol_table(source)
     stats = _RunStats()
 
+    t0 = time.monotonic()
     _ingest_code(qdrant, openai_client, registry, source, spaces, symbol_table, stats)
+    elapsed = time.monotonic() - t0
+
+    reembedded = stats.coarse_chunks - stats.skipped_chunks
+    cache_misses = reembedded - stats.summary_cache_hits
+    print(
+        f"\n{'─' * 37}\n"
+        f" Ingest summary\n"
+        f"{'─' * 37}\n"
+        f" Total chunks seen:    {stats.coarse_chunks:>6}\n"
+        f" Chunks skipped:       {stats.skipped_chunks:>6}  (unchanged)\n"
+        f" Chunks re-embedded:   {reembedded:>6}  (new or changed)\n"
+        f" Summary cache hits:   {stats.summary_cache_hits:>6}\n"
+        f" Summary cache misses: {cache_misses:>6}\n"
+        f" Elapsed:              {elapsed:>5.1f}s\n"
+        f"{'─' * 37}"
+    )
 
     if papers_dir is not None:
         _ingest_papers(qdrant, registry, papers_dir, spaces)
@@ -131,6 +152,7 @@ def main(argv: list[str] | None = None) -> None:
 class _RunStats:
     def __init__(self) -> None:
         self.coarse_chunks = 0
+        self.skipped_chunks = 0
         self.summary_cache_hits = 0
         self.coarse_with_cross_refs = 0
 
@@ -165,7 +187,7 @@ def _validate_spaces(spaces: Iterable[str]) -> None:
         raise ValueError(f"Unknown space(s): {', '.join(invalid)}")
 
 
-def _build_embedder_registry(spaces: Iterable[str]) -> EmbedderRegistry:
+def _build_embedder_registry(spaces: Iterable[str], has_papers: bool) -> EmbedderRegistry:
     registry = EmbedderRegistry()
     needed = {_model_name_for_space(space) for space in spaces}
     needed.discard(None)
@@ -174,7 +196,7 @@ def _build_embedder_registry(spaces: Iterable[str]) -> EmbedderRegistry:
         from kernelpack_rag.embed.jinacode import JinaCodeEmbedder
 
         registry.register("jinacode", JinaCodeEmbedder())
-    if "qwen3" in needed:
+    if "qwen3" in needed and has_papers:
         from kernelpack_rag.embed.qwen import QwenEmbedder
 
         registry.register("qwen3", QwenEmbedder())
@@ -212,6 +234,70 @@ def _representation_key_for_space(space: str) -> RepresentationKey | None:
     return None
 
 
+def _load_existing_hashes(qdrant: QdrantClient) -> dict[str, str]:
+    """Return {str(point_id): content_hash} for all existing coarse code points."""
+    result: dict[str, str] = {}
+    for point in _scroll_points(
+        qdrant,
+        CODE_COLLECTION,
+        scroll_filter=_field_equals_filter("granularity", "coarse"),
+        with_payload=True,
+        with_vectors=False,
+    ):
+        h = (point.payload or {}).get("content_hash")
+        if h:
+            result[str(point.id)] = h
+    return result
+
+
+def _flush_pending(
+    pending: list[tuple[str, dict, str, bool]],
+    spaces: tuple[str, ...],
+    registry: EmbedderRegistry,
+    batcher: UpsertBatcher,
+) -> None:
+    """Embed all pending (id, payload, raw_text, is_coarse) tuples in batch and upsert."""
+    if not pending:
+        return
+
+    all_vectors: list[dict] = [{} for _ in pending]
+
+    for space in spaces:
+        if space in ("summary__qwen3", "math__qwen3"):
+            continue
+        if space.startswith("bm25_"):
+            continue
+        key = _representation_key_for_space(space)
+        if key is None:
+            continue
+        model_name = _model_name_for_space(space)
+        if model_name is None:
+            continue
+
+        eligible: list[tuple[int, str]] = []
+        for i, (_, payload, _, is_coarse) in enumerate(pending):
+            if not is_coarse and space not in _FINE_ONLY_SPACES:
+                continue
+            text = build_representation(payload, key)
+            if text is None:
+                continue
+            eligible.append((i, text))
+
+        if not eligible:
+            continue
+
+        vecs = registry.get(model_name).embed_batch([t for _, t in eligible])
+        for (i, _), vec in zip(eligible, vecs):
+            all_vectors[i][space] = vec
+
+    if "bm25_code" in spaces:
+        for i, (_, _, raw_text, _) in enumerate(pending):
+            all_vectors[i]["bm25_code"] = to_qdrant_sparse(raw_text)
+
+    for (point_id, payload, _, _), vectors in zip(pending, all_vectors):
+        batcher.add(models.PointStruct(id=point_id, vector=vectors, payload=payload))
+
+
 def _ingest_code(
     qdrant: QdrantClient,
     openai_client: OpenAI,
@@ -223,68 +309,71 @@ def _ingest_code(
 ) -> None:
     batcher = UpsertBatcher(qdrant, CODE_COLLECTION)
 
-    for py_file in sorted(source.rglob("*.py")):
-        if py_file.name == "__init__.py":
-            continue
+    print("Scanning existing hashes...")
+    existing_hashes = _load_existing_hashes(qdrant)
 
+    print("Parsing source...")
+    parsed: list[tuple[str, list[CoarseChunk]]] = []
+    for py_file in _iter_source_py_files(source):
         source_text = py_file.read_text()
-        chunks = chunk_file(py_file)
+        parsed.append((source_text, chunk_file(py_file)))
+    total_chunks = sum(len(file_chunks) for _, file_chunks in parsed)
 
-        for chunk in chunks:
-            context_header = build_header(chunk, source_text, chunks)
-            summary, chunk_hash, cache_hit = _summarize_with_cache_status(
-                chunk, openai_client
-            )
-            metadata = extract_metadata(chunk, symbol_table)
-            coarse_id = get_coarse_uuid(chunk.source_file, chunk.qualname, chunk.module)
-            payload = _coarse_payload(
-                chunk=chunk,
-                context_header=context_header,
-                summary=summary,
-                content_hash_value=chunk_hash,
-                metadata=metadata,
-            )
+    pending: list[tuple[str, dict, str, bool]] = []
 
-            stats.coarse_chunks += 1
-            if cache_hit:
-                stats.summary_cache_hits += 1
-            if metadata.cross_ref_ids:
-                stats.coarse_with_cross_refs += 1
+    print("Ingesting chunks...")
+    with tqdm(total=total_chunks, desc="chunks", unit="chunk") as pbar:
+        for source_text, file_chunks in parsed:
+            for chunk in file_chunks:
+                coarse_id = get_coarse_uuid(chunk.source_file, chunk.qualname, chunk.module)
+                chunk_hash = content_hash(chunk.text)
+                if existing_hashes.get(str(coarse_id)) == chunk_hash:
+                    stats.coarse_chunks += 1
+                    stats.skipped_chunks += 1
+                    pbar.update(1)
+                    continue
 
-            batcher.add(
-                models.PointStruct(
-                    id=str(coarse_id),
-                    vector=_code_vectors(payload, chunk.text, spaces, registry, coarse=True),
-                    payload=payload,
-                )
-            )
-
-            for fine_chunk in fine_chunks(chunk):
-                fine_id = get_fine_uuid(
-                    fine_chunk.source_file, fine_chunk.qualname, chunk.module, fine_chunk.window_idx
-                )
-                fine_payload = _fine_payload(
-                    fine_chunk=fine_chunk,
-                    parent_chunk=chunk,
+                context_header = build_header(chunk, source_text, file_chunks)
+                summary, _, cache_hit = _summarize_with_cache_status(chunk, openai_client)
+                metadata = extract_metadata(chunk, symbol_table)
+                payload = _coarse_payload(
+                    chunk=chunk,
                     context_header=context_header,
                     summary=summary,
                     content_hash_value=chunk_hash,
                     metadata=metadata,
                 )
-                batcher.add(
-                    models.PointStruct(
-                        id=str(fine_id),
-                        vector=_code_vectors(
-                            fine_payload,
-                            fine_chunk.text,
-                            spaces,
-                            registry,
-                            coarse=False,
-                        ),
-                        payload=fine_payload,
-                    )
-                )
 
+                stats.coarse_chunks += 1
+                if cache_hit:
+                    stats.summary_cache_hits += 1
+                if metadata.cross_ref_ids:
+                    stats.coarse_with_cross_refs += 1
+
+                pending.append((str(coarse_id), payload, chunk.text, True))
+
+                for fine_chunk in fine_chunks(chunk):
+                    fine_id = get_fine_uuid(
+                        fine_chunk.source_file, fine_chunk.qualname, chunk.module, fine_chunk.window_idx
+                    )
+                    fine_payload = _fine_payload(
+                        fine_chunk=fine_chunk,
+                        parent_chunk=chunk,
+                        context_header=context_header,
+                        summary=summary,
+                        content_hash_value=chunk_hash,
+                        metadata=metadata,
+                    )
+                    pending.append((str(fine_id), fine_payload, fine_chunk.text, False))
+
+                if len(pending) >= BATCH_SIZE:
+                    _flush_pending(pending, spaces, registry, batcher)
+                    pending.clear()
+
+                pbar.update(1)
+
+    print("Flushing remaining batch...")
+    _flush_pending(pending, spaces, registry, batcher)
     batcher.flush()
 
 
@@ -529,11 +618,29 @@ def _prune_code_points(qdrant: QdrantClient, source: Path) -> int:
     return len(stale_ids)
 
 
+def _iter_source_py_files(source: Path) -> list[Path]:
+    """Yield all .py files: the kernelpack package plus its sibling tests/ dir."""
+    files = list(source.rglob("*.py"))
+    tests_dir = _find_tests_dir(source)
+    if tests_dir is not None:
+        files.extend(tests_dir.rglob("*.py"))
+    return sorted(set(files))
+
+
+def _find_tests_dir(source: Path) -> Path | None:
+    """Return the tests/ directory adjacent to the package, if it exists."""
+    for candidate in [
+        source.parent / "tests",          # flat layout: <root>/kernelpack/../tests
+        source.parent.parent / "tests",   # src layout:  <root>/src/kernelpack/../../tests
+    ]:
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def _current_code_ids(source: Path) -> set[str]:
     ids: set[str] = set()
-    for py_file in sorted(source.rglob("*.py")):
-        if py_file.name == "__init__.py":
-            continue
+    for py_file in _iter_source_py_files(source):
         for chunk in chunk_file(py_file):
             coarse_id = get_coarse_uuid(chunk.source_file, chunk.qualname, chunk.module)
             ids.add(str(coarse_id))
