@@ -31,21 +31,17 @@ pip install -e .
 
 ## 2. Set environment variables
 
-Copy `.env` from the example below and fill in your values:
+Create a `.env` file inside `codebase-rag/` and fill in your values:
 
 ```bash
 # .env
-OPENAI_API_KEY=sk-...          # required for ingestion
+OPENAI_API_KEY=sk-...          # required for ingestion (LLM summarization)
 KP_SRC=/absolute/path/to/kernelpack-python/src/kernelpack   # required for ingestion and integration tests
-QDRANT_HOST=localhost          # default
-QDRANT_PORT=6333               # default
+QDRANT_HOST=localhost          # optional, default shown
+QDRANT_PORT=6333               # optional, default shown
 ```
 
-The code reads directly from the environment via `os.environ`. Export your `.env` before running commands:
-
-```bash
-export $(grep -v '^#' .env | xargs)
-```
+The CLI (`python -m kernelpack_rag`) automatically loads `.env` via `python-dotenv`. The eval scripts (`eval_mcq.py`, `eval_mcq_agent.py`) do the same. No manual export needed.
 
 ---
 

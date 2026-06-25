@@ -1,6 +1,8 @@
 """CLI entry point: python -m kernelpack_rag <subcommand>"""
 
 import sys
+from dotenv import load_dotenv
+load_dotenv()
 
 
 def main() -> None:
