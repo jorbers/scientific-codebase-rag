@@ -2,9 +2,8 @@
 
 Conventions enforced here:
 - line_range is 1-indexed
-- MIN_LINES = 5 (total lines including the def/class line)
-- short methods (< 5 lines) merge into parent class_header text, not emitted separately
-- short standalone functions (< 5 lines) are dropped
+- Every function and method is emitted as its own chunk regardless of size
+- Short methods are excluded from the class_header text (same as long methods)
 """
 import textwrap
 from pathlib import Path
@@ -78,22 +77,21 @@ class TestStandaloneFunction:
         funcs = [c for c in chunk_file(p) if c.chunk_type == "function"]
         assert funcs[0].line_range == (1, 5)
 
-    def test_short_standalone_function_dropped(self, tmp_path):
-        # 2 lines — no parent class to merge into, must be dropped
+    def test_short_standalone_function_indexed(self, tmp_path):
+        # 2 lines — must be indexed, not dropped
         src = """\
             def tiny(x):
                 pass
         """
         p = write(tmp_path, "mod.py", src)
         funcs = [c for c in chunk_file(p) if c.chunk_type == "function"]
-        assert len(funcs) == 0
+        assert len(funcs) == 1
 
 
 # ── class and methods ─────────────────────────────────────────────────────────
 
 class TestClassAndMethods:
-    # solve = 6 lines (above MIN_LINES) → emitted separately
-    # tiny  = 2 lines (below MIN_LINES) → merged into class chunk
+    # solve = 6 lines, tiny = 2 lines — both emitted separately, both excluded from class_header
     SRC = """\
         class PoissonSolver:
             \"\"\"Solves Poisson equations.\"\"\"
@@ -122,31 +120,28 @@ class TestClassAndMethods:
         headers = [c for c in chunk_file(p) if c.chunk_type == "class_header"]
         assert headers[0].parent_class is None
 
-    def test_long_method_emitted(self, tmp_path):
+    def test_both_methods_emitted(self, tmp_path):
         p = write(tmp_path, "mod.py", self.SRC)
         methods = [c for c in chunk_file(p) if c.chunk_type == "method"]
-        assert len(methods) == 1
+        assert len(methods) == 2
 
-    def test_method_qualname(self, tmp_path):
+    def test_method_qualnames(self, tmp_path):
         p = write(tmp_path, "mod.py", self.SRC)
         methods = [c for c in chunk_file(p) if c.chunk_type == "method"]
-        assert methods[0].qualname == "PoissonSolver.solve"
+        qualnames = {c.qualname for c in methods}
+        assert qualnames == {"PoissonSolver.solve", "PoissonSolver.tiny"}
 
     def test_method_parent_class(self, tmp_path):
         p = write(tmp_path, "mod.py", self.SRC)
         methods = [c for c in chunk_file(p) if c.chunk_type == "method"]
-        assert methods[0].parent_class == "PoissonSolver"
+        assert all(c.parent_class == "PoissonSolver" for c in methods)
 
-    def test_short_method_not_emitted_separately(self, tmp_path):
-        p = write(tmp_path, "mod.py", self.SRC)
-        methods = [c for c in chunk_file(p) if c.chunk_type == "method"]
-        qualnames = {c.qualname for c in methods}
-        assert "PoissonSolver.tiny" not in qualnames
-
-    def test_short_method_absorbed_into_class_chunk(self, tmp_path):
+    def test_short_method_excluded_from_class_header(self, tmp_path):
+        # All methods are excluded from class_header regardless of size
         p = write(tmp_path, "mod.py", self.SRC)
         headers = [c for c in chunk_file(p) if c.chunk_type == "class_header"]
-        assert "def tiny" in headers[0].text
+        assert "def tiny" not in headers[0].text
+        assert "def solve" not in headers[0].text
 
 
 # ── module docstring ──────────────────────────────────────────────────────────

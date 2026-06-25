@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 
+# Kept for backward-compat (notebook imports this); no longer used as a gate.
 MIN_LINES = 5
 
 
@@ -24,10 +25,17 @@ class CoarseChunk:
 def _source_file_to_module(path: Path) -> str:
     parts = path.with_suffix("").parts
     idx = next((i for i, p in enumerate(parts) if p == "kernelpack"), None)
-    return ".".join(parts[idx:]) if idx is not None else path.stem
+    if idx is None:
+        return path.stem
+    module_parts = list(parts[idx:])
+    if module_parts[-1] == "__init__":
+        module_parts = module_parts[:-1]
+    return ".".join(module_parts) if module_parts else "kernelpack"
 
 def chunk_file(path: Path) -> list[CoarseChunk]:
     source = path.read_text()
+    if path.name == "__init__.py":
+        return _chunk_init_file(path, source)
     parser = _tree_sitter_parser()
     if parser is None:
         raise RuntimeError(
@@ -35,6 +43,25 @@ def chunk_file(path: Path) -> list[CoarseChunk]:
             "Run: pip install tree-sitter tree-sitter-python"
         )
     return _chunk_file_with_tree_sitter(path, source, parser)
+
+
+def _chunk_init_file(path: Path, source: str) -> list[CoarseChunk]:
+    """Return a single module-exports chunk for an __init__.py file."""
+    if not source.strip():
+        return []
+    module = _source_file_to_module(path)
+    lines = source.splitlines()
+    return [
+        CoarseChunk(
+            text=source.rstrip("\n"),
+            qualname=f"{module}.__init__",
+            chunk_type="module_exports",
+            line_range=(1, len(lines)),
+            source_file=str(path),
+            parent_class=None,
+            module=module,
+        )
+    ]
 
 
 def _tree_sitter_parser() -> Any | None:
@@ -78,17 +105,16 @@ def _chunk_file_with_tree_sitter(
 
     for outer_node, definition_node in _definition_children(root):
         if definition_node.type == "function_definition":
-            if _line_count(outer_node) >= MIN_LINES:
-                chunks.append(
-                    _make_chunk(
-                        path=path,
-                        source=source,
-                        node=outer_node,
-                        qualname=f"{_node_name(definition_node)}",
-                        chunk_type="function",
-                        parent_class=None,
-                    )
+            chunks.append(
+                _make_chunk(
+                    path=path,
+                    source=source,
+                    node=outer_node,
+                    qualname=f"{_node_name(definition_node)}",
+                    chunk_type="function",
+                    parent_class=None,
                 )
+            )
         elif definition_node.type == "class_definition":
             chunks.extend(_class_chunks(path, source, outer_node, definition_node))
 
@@ -106,8 +132,6 @@ def _class_chunks(
     if body is not None:
         for method_outer, method_node in _definition_children(body):
             if method_node.type != "function_definition":
-                continue
-            if _method_line_count(source, method_outer, outer_node) < MIN_LINES:
                 continue
 
             long_method_ranges.append(
