@@ -16,6 +16,7 @@ from kernelpack_rag.embed.jinacode import JinaCodeEmbedder
 from kernelpack_rag.embed.sparse import to_qdrant_sparse
 from kernelpack_rag.enrich.summarize import content_hash
 from kernelpack_rag.ingest import BATCH_SIZE, UpsertBatcher
+from kernelpack_rag.tokenizer import bm25_tokenize
 
 _kp_src = os.environ.get("KP_SRC", "")
 README_PATH = (
@@ -105,6 +106,12 @@ def ingest_readme(readme_path: Path = README_PATH) -> list[str]:
         chunks.extend(_subsplit_section(title, body, embedder._tokenizer))
     if len(chunks) > len(sections):
         tqdm.write(f"Expanded to {len(chunks)} chunks after paragraph splitting")
+
+    before = len(chunks)
+    chunks = [(t, b, i) for t, b, i in chunks if bm25_tokenize(b)]
+    dropped = before - len(chunks)
+    if dropped:
+        tqdm.write(f"Dropped {dropped} chunk(s) with no tokenizable content")
 
     qdrant = make_client()
 
