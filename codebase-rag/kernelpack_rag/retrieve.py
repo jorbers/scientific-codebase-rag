@@ -534,8 +534,8 @@ def _hybrid_query(
             client.query_points(query=dense_query_vector, using=dense_space, **shared_kwargs)
         ):
             dense_leg_scores[str(point.id)] = float(getattr(point, "score", 0.0) or 0.0)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"warning: dense score probe failed ({exc})", file=sys.stderr)
 
     try:
         for point in _result_points(
@@ -549,8 +549,8 @@ def _hybrid_query(
             )
         ):
             sparse_leg_scores[str(point.id)] = float(getattr(point, "score", 0.0) or 0.0)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"warning: sparse score probe failed ({exc})", file=sys.stderr)
 
     call_kwargs: dict[str, Any] = {
         "collection_name": collection,

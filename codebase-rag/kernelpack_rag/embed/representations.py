@@ -1,38 +1,8 @@
 """
-embed/representations.py
+Builds text representations (ctx / code / codecom / com) from chunk payloads.
 
-Builds text variants from a chunk payload dict.
-
-Four representations, matching the D4 named space layout:
-
-    ctx      — summary + context_header + raw text    (production primary, D1 ordering)
-    code     — raw text with docstrings and inline comments stripped
-    codecom  — raw text verbatim
-    com      — docstrings and inline comments only; None when chunk has neither
-
-The ingestor calls build_representation(chunk, key) once per (chunk, space) pair.
-Returning None signals "skip this vector for this point" — the ingestor does not upsert
-a vector for a named space when the representation is None. This is how com handles
-functions that have no comments yet without special-casing anything downstream.
-
-Representation logic lives here, not in the ingestor, so it can be tested without
-Qdrant and called independently by reembed.py (which re-embeds from payload only,
-without re-running tree-sitter).
-
-Dependencies
-------------
-None beyond the standard library. AST-based stripping uses Python's built-in ast module.
-This is intentional: tree-sitter is for chunking, not for post-hoc text manipulation.
-
-Note on the AST approach
-------------------------
-Python's ast module can parse and unparse (ast.unparse, Python 3.9+) but unparse
-normalizes whitespace and loses comments. For CODE stripping, we use a line-filter
-approach rather than AST round-tripping:
-  - Docstrings: detect via ast.get_docstring and remove the literal string from the text
-  - Inline comments: strip #-prefixed segments from each line
-This preserves the original whitespace for everything the model does see, which matters
-for code-pretrained models that use indentation structure.
+Call build_representation(chunk, key) once per (chunk, named-space) pair. Returning
+None means "no vector for this space" — used by com when a chunk has no comments.
 """
 
 import ast
@@ -212,11 +182,10 @@ def _extract_docstring_regex(text: str) -> Optional[str]:
 
 
 def _strip_docstrings(text: str) -> str:
-    """
-    Remove docstrings from Python source text.
+    """Remove docstrings from Python source text via AST line ranges; regex fallback on parse error.
 
-    Strategy: find docstring literal positions via AST, then remove those
-    line ranges from the text. Falls back to regex removal if AST parse fails.
+    We use line-filter removal rather than ast.unparse because unparse normalizes
+    whitespace and drops comments — code-pretrained models rely on indentation structure.
     """
     try:
         tree = ast.parse(text)

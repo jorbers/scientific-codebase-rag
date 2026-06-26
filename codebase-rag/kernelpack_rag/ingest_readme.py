@@ -8,6 +8,7 @@ import uuid
 from pathlib import Path
 
 from qdrant_client import models
+from tqdm import tqdm
 
 from kernelpack_rag.chunking.metadata import KP_NAMESPACE
 from kernelpack_rag.config import CODE_COLLECTION, make_client
@@ -94,17 +95,16 @@ def ingest_readme(readme_path: Path = README_PATH) -> list[str]:
     """Embed and upsert all README sections. Returns the list of point ID strings."""
     text = readme_path.read_text()
     sections = split_readme(text)
-    print(f"Found {len(sections)} README sections")
+    tqdm.write(f"Found {len(sections)} README sections")
 
-    print("Loading embedder...")
+    tqdm.write("Loading embedder...")
     embedder = JinaCodeEmbedder()
-    print("Embedder ready.")
 
     chunks: list[tuple[str, str, int]] = []
     for title, body in sections:
         chunks.extend(_subsplit_section(title, body, embedder._tokenizer))
     if len(chunks) > len(sections):
-        print(f"Expanded to {len(chunks)} chunks after paragraph splitting")
+        tqdm.write(f"Expanded to {len(chunks)} chunks after paragraph splitting")
 
     qdrant = make_client()
 
@@ -128,11 +128,12 @@ def ingest_readme(readme_path: Path = README_PATH) -> list[str]:
 
     if to_embed:
         texts = [body for _, body, _ in to_embed]
-        print(f"Embedding {len(texts)} chunks...")
+        tqdm.write(f"Embedding {len(texts)} chunks...")
         dense_vecs = embedder.embed_batch(texts)
 
-        print("Building sparse vectors...")
-        for (title, body, para_idx), dense_vec in zip(to_embed, dense_vecs):
+        for (title, body, para_idx), dense_vec in tqdm(
+            zip(to_embed, dense_vecs), total=len(to_embed), desc="upserting README chunks"
+        ):
             pid = _point_id(title, para_idx)
             batcher.add(
                 models.PointStruct(
@@ -145,10 +146,9 @@ def ingest_readme(readme_path: Path = README_PATH) -> list[str]:
                 )
             )
 
-        print("Upserting to Qdrant...")
         batcher.flush()
 
-    print(
+    tqdm.write(
         f"Done: {len(chunks)} chunks total — "
         f"{skipped} unchanged (skipped), {len(to_embed)} re-embedded"
     )
@@ -159,7 +159,7 @@ def ingest_readme(readme_path: Path = README_PATH) -> list[str]:
         with_payload=False,
         with_vectors=False,
     )
-    print(f"Sanity check: {len(found)}/{len(point_ids)} points confirmed in Qdrant")
+    tqdm.write(f"Sanity check: {len(found)}/{len(point_ids)} points confirmed in Qdrant")
 
     return point_ids
 

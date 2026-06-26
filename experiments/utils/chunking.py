@@ -11,7 +11,12 @@ REPO_PATH = Path("../../kernelpack-python/src/kernelpack")
 MIN_LINES = 5   # functions with fewer than 5 lines dropped (inclusive)
 
 
-def load_docs(repo_path: Path) -> list[dict]:
+def load_docs(repo_path: Path = REPO_PATH) -> list[dict]:
+    if not repo_path.exists():
+        raise FileNotFoundError(
+            f"kernelpack source not found at {repo_path.resolve()}. "
+            "Clone kernelpack-python as a sibling of this repo or update REPO_PATH."
+        )
     docs = []
     for path in sorted(repo_path.rglob("*.py")):  # will include __init__.py files
         docs.append({"path": str(path), "text": path.read_text(encoding="utf-8")})
