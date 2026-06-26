@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -38,7 +39,7 @@ from zoneinfo import ZoneInfo
 
 from qdrant_client import QdrantClient
 
-DISPLAY_TZ = ZoneInfo("America/Los_Angeles")  # handles PST/PDT automatically
+DISPLAY_TZ = ZoneInfo(os.environ.get("DISPLAY_TZ", "America/Los_Angeles"))
 
 TEXT_PREVIEW_CHARS = 240
 TOP_N_PER_QUERY_IN_README = 3

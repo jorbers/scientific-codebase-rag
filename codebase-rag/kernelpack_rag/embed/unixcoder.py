@@ -45,3 +45,7 @@ class UniXcoderEmbedder:
             output = self._model(**encoded)
         vecs = _mean_pool(output.last_hidden_state, encoded["attention_mask"])
         return vecs.tolist()
+
+    def embed_query_batch(self, texts: list[str]) -> list[list[float]]:
+        # UniXcoder uses no query prefix — same encoding for documents and queries.
+        return self.embed_batch(texts)

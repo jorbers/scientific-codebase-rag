@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 
-# Kept for backward-compat (notebook imports this); no longer used as a gate.
 MIN_LINES = 5
 
 
@@ -21,6 +20,7 @@ class CoarseChunk:
     source_file: str
     parent_class: str | None
     module: str
+
 
 def _source_file_to_module(path: Path) -> str:
     parts = path.with_suffix("").parts
@@ -217,23 +217,6 @@ def _make_chunk(
         parent_class=parent_class,
         module=_source_file_to_module(path),
     )
-
-
-def _line_count(node: Any) -> int:
-    return node.end_point[0] - node.start_point[0] + 1
-
-
-def _method_line_count(source: str, method_node: Any, class_node: Any) -> int:
-    line_count = _line_count(method_node)
-    lines = source.splitlines()
-    next_line_index = method_node.end_point[0] + 1
-    if (
-        next_line_index < class_node.end_point[0]
-        and next_line_index < len(lines)
-        and not lines[next_line_index].strip()
-    ):
-        return line_count + 1
-    return line_count
 
 
 def _slice_node(source: str, node: Any) -> str:

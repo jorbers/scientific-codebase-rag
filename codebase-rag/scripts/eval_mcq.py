@@ -15,17 +15,19 @@ Metrics:
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Ensure the project root is on sys.path before importing project modules.
+REPO_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
 import argparse
 import json
 import os
 import re
-import sys
 import time
 from collections import defaultdict
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(REPO_ROOT))
 
 from dotenv import load_dotenv
 

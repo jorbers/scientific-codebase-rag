@@ -447,42 +447,6 @@ def _fine_payload(
     }
 
 
-def _code_vectors(
-    payload: dict,
-    raw_text: str,
-    spaces: tuple[str, ...],
-    registry: EmbedderRegistry,
-    *,
-    coarse: bool,
-) -> dict:
-    vectors: dict = {}
-    allowed_fine_spaces = {"ctx__jinacode", "bm25_code"}
-
-    for space in spaces:
-        if not coarse and space not in allowed_fine_spaces:
-            continue
-        if space == "summary__qwen3" or space == "math__qwen3":
-            continue
-        if space == "bm25_code":
-            vectors[space] = to_qdrant_sparse(raw_text)
-            continue
-        if space.startswith("bm25_"):
-            continue
-
-        key = _representation_key_for_space(space)
-        if key is None:
-            continue
-        text = build_representation(payload, key)
-        if text is None:
-            continue
-        model_name = _model_name_for_space(space)
-        if model_name is None:
-            continue
-        vectors[space] = registry.get(model_name).embed_batch([text])[0]
-
-    return vectors
-
-
 def _ingest_papers(
     qdrant: QdrantClient,
     registry: EmbedderRegistry,
@@ -583,8 +547,8 @@ def _find_paper_for_terms(
     qdrant: QdrantClient,
     math_terms: list[str],
 ):
-    # TODO: replace with vector search once corpus has >1 paper.
-    # scroll limit=1 returns arbitrary match — fine for single-paper corpus only.
+    # scroll limit=1 returns an arbitrary matching paper — correct only for a
+    # single-paper corpus. Replace with vector search when corpus grows.
     points = list(
         _scroll_points(
             qdrant,

@@ -1,6 +1,10 @@
-from pathlib import Path
+"""Generate and cache LLM summaries for all coarse chunks in KP_SRC."""
+
+from __future__ import annotations
+
 import os
 import sys
+from pathlib import Path
 
 import openai
 

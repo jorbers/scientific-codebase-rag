@@ -263,4 +263,4 @@ def _get_model_value(model: object, field_name: str) -> object:
     return getattr(model, field_name, None)
 
 
-__all__ = ["COLLECTIONS_CONFIG", "ensure_collections"]
+__all__ = ["ensure_collections"]

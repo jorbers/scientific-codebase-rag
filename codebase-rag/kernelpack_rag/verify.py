@@ -10,8 +10,8 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
+from kernelpack_rag.config import CODE_COLLECTION, PAPERS_COLLECTION, make_client
 from kernelpack_rag.embed.jinacode import JinaCodeEmbedder
-from kernelpack_rag.config import CODE_COLLECTION, PAPERS_COLLECTION
 from kernelpack_rag.qdrant_utils import _field_equals_filter, _scroll_points
 from kernelpack_rag.rerank import NoopReranker
 from kernelpack_rag.retrieve import hybrid
@@ -277,7 +277,7 @@ def print_report(
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    client = QdrantClient(host="localhost", port=6333)
+    client = make_client()
     embedder = JinaCodeEmbedder()
 
     invariant_result = verify_invariants(client)

@@ -10,17 +10,18 @@ Usage:
 
 from __future__ import annotations
 
-import argparse
-import json
-import re
 import sys
-import uuid
 from pathlib import Path
 
+# Ensure the project root is on sys.path before importing project modules.
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+import argparse
+import json
 import os
+import re
+import uuid
 
 import openai
 from dotenv import load_dotenv

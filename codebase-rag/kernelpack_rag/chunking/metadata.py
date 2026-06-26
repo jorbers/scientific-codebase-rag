@@ -1,4 +1,5 @@
 """Metadata extraction for coarse chunks of the kernelpack source tree."""
+
 from __future__ import annotations
 
 import ast
@@ -6,6 +7,8 @@ import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+
+from kernelpack_rag.chunking.coarse import CoarseChunk
 from kernelpack_rag.tokenizer import tokenize
 
 
@@ -84,7 +87,7 @@ def build_symbol_table(package_root: Path) -> dict[str, uuid.UUID]:
     return table
 
 
-def extract_metadata(chunk, symbol_table: dict) -> ChunkMetadata:
+def extract_metadata(chunk: CoarseChunk, symbol_table: dict) -> ChunkMetadata:
     """Extract rich metadata from a coarse chunk.
 
     Reads source from disk (does not use chunk.ast_node) and parses AST
@@ -140,7 +143,9 @@ def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
 
 
-def _find_node(tree: ast.Module, parts: list[str]):
+def _find_node(
+    tree: ast.Module, parts: list[str]
+) -> ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | None:
     """Return the AST node matching the suffix parts (after the module)."""
     if len(parts) == 1:
         for node in ast.walk(tree):

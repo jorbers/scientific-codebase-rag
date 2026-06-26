@@ -1,7 +1,9 @@
 """Summarize coarse code chunks with an OpenAI chat client."""
 
-from pathlib import Path
+from __future__ import annotations
+
 import hashlib
+from pathlib import Path
 
 
 SYSTEM_PROMPT = """You are a technical documentation assistant for a scientific computing
